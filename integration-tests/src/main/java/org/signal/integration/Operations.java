@@ -77,7 +77,7 @@ public final class Operations {
 
     // register account
     final RegistrationRequest registrationRequest = new RegistrationRequest(
-        null, registrationPassword, accountAttributes, true, false,
+        null, registrationPassword, "",accountAttributes, true, false,
         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
 
     final AccountIdentityResponse registrationResponse = apiPost("/v1/registration", registrationRequest)
@@ -111,6 +111,7 @@ public final class Operations {
     // register account
     final RegistrationRequest registrationRequest = new RegistrationRequest(null,
         registrationPassword,
+        "",
         accountAttributes,
         true,
         true,
