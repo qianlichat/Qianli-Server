@@ -18,7 +18,7 @@ public class RSAUtils {
   public static KeyPair generate() {
     try {
       KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-      keyGen.initialize(1024);
+      keyGen.initialize(2048);
       return keyGen.generateKeyPair();
     } catch (NoSuchAlgorithmException e) {
       logger.error("generate failed !",e);
