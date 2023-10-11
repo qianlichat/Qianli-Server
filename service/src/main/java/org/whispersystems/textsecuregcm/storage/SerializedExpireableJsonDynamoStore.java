@@ -124,8 +124,8 @@ public abstract class SerializedExpireableJsonDynamoStore<T> {
         .thenApply(response -> {
           try {
             return response.hasItem()
-                ? filterMaybeExpiredValue(
-                SystemMapper.jsonMapper()
+                ?
+                Optional.of(SystemMapper.jsonMapper()
                     .readValue(response.item().get(ATTR_SERIALIZED_VALUE).s(), deserializationTargetClass))
                 : Optional.empty();
           } catch (final JsonProcessingException e) {

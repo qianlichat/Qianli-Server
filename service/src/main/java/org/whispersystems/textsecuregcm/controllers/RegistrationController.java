@@ -163,7 +163,8 @@ public class RegistrationController {
     final VerificationSession verificationSession = retrieveVerificationSession(registrationRequest.sessionId());
     logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
     String pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
-    logger.info("register number="+number+", after pwd = " + pwd);
+    logger.info("register n" 
+        + "umber="+number+", after pwd = " + pwd);
     if (existingAccount.isPresent()) {
       logger.info("register number="+number+", here5");
 
