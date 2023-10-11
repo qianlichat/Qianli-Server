@@ -131,9 +131,11 @@ public class RegistrationController {
       @HeaderParam(HeaderUtils.X_SIGNAL_AGENT) final String signalAgent,
       @HeaderParam(HttpHeaders.USER_AGENT) final String userAgent,
       @NotNull @Valid final RegistrationRequest registrationRequest) throws RateLimitExceededException, InterruptedException {
-
-    final String number = authorizationHeader.getUsername();
+//    String accountName = authorizationHeader.getUsername();
     final String password = authorizationHeader.getPassword();
+
+    final VerificationSession verificationSession = retrieveVerificationSession(registrationRequest.sessionId());
+    String number = verificationSession.accountName();
 
     logger.info("register number="+number+", password="+password);
 
@@ -160,7 +162,7 @@ public class RegistrationController {
       throw new WebApplicationException(Response.status(409, "device transfer available").build());
     }
     logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
-    final VerificationSession verificationSession = retrieveVerificationSession(registrationRequest.sessionId());
+
     logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
     String pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
     logger.info("register n" 

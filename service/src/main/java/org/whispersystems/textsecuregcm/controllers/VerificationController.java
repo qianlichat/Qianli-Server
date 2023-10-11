@@ -155,7 +155,7 @@ public class VerificationController {
     VerificationSession verificationSession = new VerificationSession(null, new ArrayList<>(),
         Collections.emptyList(), false,
         clock.millis(), clock.millis(), registrationServiceSession.expiration(),
-        request.getNumber(),
+        accountName,
         RSAUtils.keyToBase64(generate.getPublic()),
         RSAUtils.keyToBase64(generate.getPrivate()));
 
