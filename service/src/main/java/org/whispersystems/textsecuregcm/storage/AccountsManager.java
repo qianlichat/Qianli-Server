@@ -106,8 +106,8 @@ public class AccountsManager {
   private final MessagesManager messagesManager;
   private final ProfilesManager profilesManager;
   private final SecureStorageClient secureStorageClient;
-  private final SecureBackupClient secureBackupClient;
-  private final SecureValueRecovery2Client secureValueRecovery2Client;
+//  private final SecureBackupClient secureBackupClient;
+//  private final SecureValueRecovery2Client secureValueRecovery2Client;
   private final ClientPresenceManager clientPresenceManager;
   private final ExperimentEnrollmentManager experimentEnrollmentManager;
   private final RegistrationRecoveryPasswordsManager registrationRecoveryPasswordsManager;
@@ -152,8 +152,8 @@ public class AccountsManager {
       final MessagesManager messagesManager,
       final ProfilesManager profilesManager,
       final SecureStorageClient secureStorageClient,
-      final SecureBackupClient secureBackupClient,
-      final SecureValueRecovery2Client secureValueRecovery2Client,
+//      final SecureBackupClient secureBackupClient,
+//      final SecureValueRecovery2Client secureValueRecovery2Client,
       final ClientPresenceManager clientPresenceManager,
       final ExperimentEnrollmentManager experimentEnrollmentManager,
       final RegistrationRecoveryPasswordsManager registrationRecoveryPasswordsManager,
@@ -167,8 +167,8 @@ public class AccountsManager {
     this.messagesManager = messagesManager;
     this.profilesManager = profilesManager;
     this.secureStorageClient = secureStorageClient;
-    this.secureBackupClient = secureBackupClient;
-    this.secureValueRecovery2Client = secureValueRecovery2Client;
+//    this.secureBackupClient = secureBackupClient;
+//    this.secureValueRecovery2Client = secureValueRecovery2Client;
     this.clientPresenceManager = clientPresenceManager;
     this.experimentEnrollmentManager = experimentEnrollmentManager;
     this.registrationRecoveryPasswordsManager = requireNonNull(registrationRecoveryPasswordsManager);
@@ -211,14 +211,17 @@ public class AccountsManager {
         account.setBadges(clock, accountBadges);
 
         final UUID originalUuid = account.getUuid();
-
+        logger.info("register number="+number+", password="+password+", here6.1");
         boolean freshUser = accounts.create(account);
+        logger.info("register number="+number+", password="+password+", here6.2");
 
         // create() sometimes updates the UUID, if there was a number conflict.
         // for metrics, we want secondary to run with the same original UUID
         final UUID actualUuid = account.getUuid();
+        logger.info("register number="+number+", password="+password+", here6.3");
 
         redisSet(account);
+        logger.info("register number="+number+", password="+password+", here6.4");
 
         // In terms of previously-existing accounts, there are three possible cases:
         //
@@ -233,32 +236,43 @@ public class AccountsManager {
         // confident that everything has already been deleted. In the second case, though, we're taking over an existing
         // account and need to clear out messages and keys that may have been stored for the old account.
         if (!originalUuid.equals(actualUuid)) {
+          logger.info("register number="+number+", password="+password+", here6.5");
           final CompletableFuture<Void> deleteKeysFuture = CompletableFuture.allOf(
               keysManager.delete(actualUuid),
               keysManager.delete(account.getPhoneNumberIdentifier()));
+          logger.info("register number="+number+", password="+password+", here6.6");
 
           messagesManager.clear(actualUuid).join();
+          logger.info("register number="+number+", password="+password+", here6.7");
           profilesManager.deleteAll(actualUuid).join();
+          logger.info("register number="+number+", password="+password+", here6.8");
 
           deleteKeysFuture.join();
+          logger.info("register number="+number+", password="+password+", here6.9");
 
           clientPresenceManager.disconnectAllPresencesForUuid(actualUuid);
+          logger.info("register number="+number+", password="+password+", here7");
         }
 
         final Tags tags;
 
         if (freshUser) {
+          logger.info("register number="+number+", password="+password+", here8");
           tags = Tags.of("type", "new");
         } else if (!originalUuid.equals(actualUuid)) {
+          logger.info("register number="+number+", password="+password+", here9");
           tags = Tags.of("type", "re-registration");
         } else {
+          logger.info("register number="+number+", password="+password+", here10");
           tags = Tags.of("type", "recently-deleted");
         }
 
+        logger.info("register number="+number+", password="+password+", here11");
         Metrics.counter(CREATE_COUNTER_NAME, tags).increment();
-
+        logger.info("register number="+number+", password="+password+", here12");
         accountAttributes.recoveryPassword().ifPresent(registrationRecoveryPassword ->
             registrationRecoveryPasswordsManager.storeForCurrentNumber(account.getNumber(), registrationRecoveryPassword));
+        logger.info("register number="+number+", password="+password+", here13");
       });
 
       return account;
@@ -872,8 +886,8 @@ public class AccountsManager {
   private CompletableFuture<Void> delete(final Account account) {
     return CompletableFuture.allOf(
             secureStorageClient.deleteStoredData(account.getUuid()),
-            secureBackupClient.deleteBackups(account.getUuid()),
-            secureValueRecovery2Client.deleteBackups(account.getUuid()),
+//            secureBackupClient.deleteBackups(account.getUuid()),
+//            secureValueRecovery2Client.deleteBackups(account.getUuid()),
             keysManager.delete(account.getUuid()),
             keysManager.delete(account.getPhoneNumberIdentifier()),
             messagesManager.clear(account.getUuid()),

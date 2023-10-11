@@ -143,20 +143,31 @@ public class VerificationController {
   public VerificationSessionResponse createSession(@NotNull @Valid CreateVerificationSessionRequest request)
       throws RateLimitExceededException {
 
-    final Pair<String, PushNotification.TokenType> pushTokenAndType = validateAndExtractPushToken(
-        request.getUpdateVerificationSessionRequest());
-
-    final Phonenumber.PhoneNumber phoneNumber;
-    try {
-      phoneNumber = PhoneNumberUtil.getInstance().parse(request.getNumber(), null);
-    } catch (final NumberParseException e) {
-      throw new ServerErrorException("could not parse already validated number", Response.Status.INTERNAL_SERVER_ERROR);
+//    final Pair<String, PushNotification.TokenType> pushTokenAndType = validateAndExtractPushToken(
+//        request.getUpdateVerificationSessionRequest());
+    String accountName = request.getNumber();
+    if(accountName == null){
+      throw new ServerErrorException("could not get account name", Response.Status.BAD_REQUEST);
     }
+    if(accountName.startsWith("@")){
+      accountName = accountName.substring(1);
+    }
+    if(!accountName.matches("[a-zA-Z0-9]+")){
+      throw new ServerErrorException("account name is invalidate, only alphabet and numbers are allowed", Response.Status.BAD_REQUEST);
+    }
+
+//    final Phonenumber.PhoneNumber phoneNumber;
+//    try {
+//      phoneNumber = PhoneNumberUtil.getInstance().parse(request.getNumber(), null);
+//    } catch (final NumberParseException e) {
+//      throw new ServerErrorException("could not parse already validated number", Response.Status.INTERNAL_SERVER_ERROR);
+//    }
 
     final RegistrationServiceSession registrationServiceSession;
     try {
-      registrationServiceSession = registrationServiceClient.createRegistrationSession(phoneNumber,
-          accountsManager.getByE164(request.getNumber()).isPresent(),
+      boolean accountExists = accountsManager.getByE164(request.getNumber()).isPresent();
+      registrationServiceSession = registrationServiceClient.createRegistrationSession(accountName,
+          accountExists,
           REGISTRATION_RPC_TIMEOUT).join();
     } catch (final CancellationException e) {
 
@@ -176,10 +187,10 @@ public class VerificationController {
         Collections.emptyList(), false,
         clock.millis(), clock.millis(), registrationServiceSession.expiration());
 
-    verificationSession = handlePushToken(pushTokenAndType, verificationSession);
+//    verificationSession = handlePushToken(pushTokenAndType, verificationSession);
     // unconditionally request a captcha -- it will either be the only requested information, or a fallback
     // if a push challenge sent in `handlePushToken` doesn't arrive in time
-    verificationSession.requestedInformation().add(VerificationSession.Information.CAPTCHA);
+//    verificationSession.requestedInformation().add(VerificationSession.Information.CAPTCHA);
 
     storeVerificationSession(registrationServiceSession, verificationSession);
 
@@ -197,41 +208,43 @@ public class VerificationController {
       @NotNull @Valid final UpdateVerificationSessionRequest updateVerificationSessionRequest,
       @NotNull @Extract final ScoreThreshold captchaScoreThreshold) {
 
-    final String sourceHost = HeaderUtils.getMostRecentProxy(forwardedFor).orElseThrow();
+//    final String sourceHost = HeaderUtils.getMostRecentProxy(forwardedFor).orElseThrow();
 
     final Pair<String, PushNotification.TokenType> pushTokenAndType = validateAndExtractPushToken(
         updateVerificationSessionRequest);
 
     final RegistrationServiceSession registrationServiceSession = retrieveRegistrationServiceSession(encodedSessionId);
     VerificationSession verificationSession = retrieveVerificationSession(registrationServiceSession);
-
+    logger.info("/session/{sessionId here1");
     try {
       // these handle* methods ordered from least likely to fail to most, so take care when considering a change
       verificationSession = handlePushToken(pushTokenAndType, verificationSession);
-
+      logger.info("/session/{sessionId here2");
       verificationSession = handlePushChallenge(updateVerificationSessionRequest, registrationServiceSession,
           verificationSession);
-
-      verificationSession = handleCaptcha(sourceHost, updateVerificationSessionRequest, registrationServiceSession,
-          verificationSession, userAgent, captchaScoreThreshold.getScoreThreshold());
+      logger.info("/session/{sessionId here3");
+//      verificationSession = handleCaptcha(sourceHost, updateVerificationSessionRequest, registrationServiceSession,
+//          verificationSession, userAgent, captchaScoreThreshold.getScoreThreshold());
+      logger.info("/session/{sessionId here3.9");
     } catch (final RateLimitExceededException e) {
-
+      logger.info("/session/{sessionId here4");
       final Response response = buildResponseForRateLimitExceeded(verificationSession, registrationServiceSession,
           e.getRetryDuration());
       throw new ClientErrorException(response);
 
     } catch (final ForbiddenException e) {
-
+      logger.info("/session/{sessionId here5");
       throw new ClientErrorException(Response.status(Response.Status.FORBIDDEN)
           .entity(buildResponse(registrationServiceSession, verificationSession))
           .build());
 
     } finally {
+      logger.info("/session/{sessionId here6");
       // Each of the handle* methods may update requestedInformation, submittedInformation, and allowedToRequestCode,
       // and we want to be sure to store a changes, even if a later method throws
       updateStoredVerificationSession(registrationServiceSession, verificationSession);
     }
-
+    logger.info("/session/{sessionId here7");
     return buildResponse(registrationServiceSession, verificationSession);
   }
 
@@ -244,9 +257,16 @@ public class VerificationController {
 
   private void updateStoredVerificationSession(final RegistrationServiceSession registrationServiceSession,
       final VerificationSession verificationSession) {
-    verificationSessionManager.update(registrationServiceSession.encodedSessionId(), verificationSession)
-        .orTimeout(DYNAMODB_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
-        .join();
+    logger.info("/session/{sessionId here9");
+    try{
+      verificationSessionManager.update(registrationServiceSession.encodedSessionId(), verificationSession)
+          .orTimeout(DYNAMODB_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
+          .join();
+    }catch (Throwable t){
+      logger.error("/session/{sessionId here9.9",t);
+      throw t;
+    }
+    logger.info("/session/{sessionId here10");
   }
 
   /**
@@ -329,12 +349,15 @@ public class VerificationController {
           verificationSession.requestedInformation());
       // a push challenge satisfies a requested captcha
       requestedInformation.remove(VerificationSession.Information.CAPTCHA);
-      final boolean allowedToRequestCode = (verificationSession.allowedToRequestCode()
-          || requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE))
-          && requestedInformation.isEmpty();
+//      final boolean allowedToRequestCode = (verificationSession.allowedToRequestCode()
+//          || requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE))
+//          && requestedInformation.isEmpty();
+      if(!verificationSession.allowedToRequestCode()){
+        requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE);
+      }
 
       verificationSession = new VerificationSession(verificationSession.pushChallenge(), requestedInformation,
-          submittedInformation, allowedToRequestCode, verificationSession.createdTimestamp(), clock.millis(),
+          submittedInformation, false, verificationSession.createdTimestamp(), clock.millis(),
           verificationSession.remoteExpirationSeconds());
 
     } else if (pushChallengePresent) {
@@ -360,19 +383,22 @@ public class VerificationController {
       final Optional<Float> captchaScoreThreshold) throws RateLimitExceededException {
 
     if (updateVerificationSessionRequest.captcha() == null) {
+      logger.info("/session/{sessionId here0");
       return verificationSession;
     }
+    logger.info("/session/{sessionId here0.1");
 
     RateLimiter.adaptLegacyException(
         () -> rateLimiters.getVerificationCaptchaLimiter().validate(registrationServiceSession.encodedSessionId()));
-
+    logger.info("/session/{sessionId here0.2");
     final AssessmentResult assessmentResult;
     try {
-
+      logger.info("/session/{sessionId captcha="+updateVerificationSessionRequest.captcha());
+      logger.info("/session/{sessionId sourceHost="+sourceHost);
       assessmentResult = registrationCaptchaManager.assessCaptcha(
               Optional.of(updateVerificationSessionRequest.captcha()), sourceHost)
           .orElseThrow(() -> new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR));
-
+      logger.info("/session/{sessionId here0.3");
       Metrics.counter(CAPTCHA_ATTEMPT_COUNTER_NAME, Tags.of(
               Tag.of(SUCCESS_TAG_NAME, String.valueOf(assessmentResult.isValid(captchaScoreThreshold))),
               UserAgentTagUtil.getPlatformTag(userAgent),
@@ -380,31 +406,37 @@ public class VerificationController {
               Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
               Tag.of(SCORE_TAG_NAME, assessmentResult.getScoreString())))
           .increment();
-
+      logger.info("/session/{sessionId here0.4");
     } catch (IOException e) {
+      logger.info("/session/{sessionId here0.5");
       throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
     }
+    logger.info("/session/{sessionId here0.6");
 
     if (assessmentResult.isValid(captchaScoreThreshold)) {
+      logger.info("/session/{sessionId here0.7");
       final List<VerificationSession.Information> submittedInformation = new ArrayList<>(
           verificationSession.submittedInformation());
       submittedInformation.add(VerificationSession.Information.CAPTCHA);
-
+      logger.info("/session/{sessionId here0.8");
       final List<VerificationSession.Information> requestedInformation = new ArrayList<>(
           verificationSession.requestedInformation());
+      logger.info("/session/{sessionId here0.88");
       // a captcha satisfies a push challenge, in case of push deliverability issues
       requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE);
+      logger.info("/session/{sessionId here0.9");
       final boolean allowedToRequestCode = (verificationSession.allowedToRequestCode()
           || requestedInformation.remove(VerificationSession.Information.CAPTCHA))
           && requestedInformation.isEmpty();
-
+      logger.info("/session/{sessionId here0.91");
       verificationSession = new VerificationSession(verificationSession.pushChallenge(), requestedInformation,
           submittedInformation, allowedToRequestCode, verificationSession.createdTimestamp(), clock.millis(),
           verificationSession.remoteExpirationSeconds());
     } else {
+      logger.info("/session/{sessionId here0.92");
       throw new ForbiddenException();
     }
-
+    logger.info("/session/{sessionId here0.93");
     return verificationSession;
   }
 
@@ -462,55 +494,55 @@ public class VerificationController {
       }
     };
 
-    final RegistrationServiceSession resultSession;
-    try {
-      resultSession = registrationServiceClient.sendVerificationCode(registrationServiceSession.id(),
-          messageTransport,
-          clientType,
-          acceptLanguage.orElse(null), REGISTRATION_RPC_TIMEOUT).join();
-    } catch (final CancellationException e) {
-      throw new ServerErrorException("registration service unavailable", Response.Status.SERVICE_UNAVAILABLE);
-    } catch (final CompletionException e) {
-      final Throwable unwrappedException = ExceptionUtils.unwrap(e);
-      if (unwrappedException instanceof RateLimitExceededException rateLimitExceededException) {
-        if (rateLimitExceededException instanceof VerificationSessionRateLimitExceededException ve) {
-          final Response response = buildResponseForRateLimitExceeded(verificationSession, ve.getRegistrationSession(),
-              ve.getRetryDuration());
-          throw new ClientErrorException(response);
-        }
+//    final RegistrationServiceSession resultSession;
+//    try {
+//      resultSession = registrationServiceClient.sendVerificationCode(registrationServiceSession.id(),
+//          messageTransport,
+//          clientType,
+//          acceptLanguage.orElse(null), REGISTRATION_RPC_TIMEOUT).join();
+//    } catch (final CancellationException e) {
+      throw new ServerErrorException("no need this op anymore", Response.Status.SERVICE_UNAVAILABLE);
+//    } catch (final CompletionException e) {
+//      final Throwable unwrappedException = ExceptionUtils.unwrap(e);
+//      if (unwrappedException instanceof RateLimitExceededException rateLimitExceededException) {
+//        if (rateLimitExceededException instanceof VerificationSessionRateLimitExceededException ve) {
+//          final Response response = buildResponseForRateLimitExceeded(verificationSession, ve.getRegistrationSession(),
+//              ve.getRetryDuration());
+//          throw new ClientErrorException(response);
+//        }
+//
+//        throw new RateLimitExceededException(rateLimitExceededException.getRetryDuration().orElse(null), false);
+//      } else if (unwrappedException instanceof RegistrationServiceException registrationServiceException) {
+//
+//        throw registrationServiceException.getRegistrationSession()
+//            .map(s -> buildResponse(s, verificationSession))
+//            .map(verificationSessionResponse -> {
+//              final Response response = registrationServiceException instanceof TransportNotAllowedException
+//                  ? Response.status(418).entity(verificationSessionResponse).build()
+//                  : Response.status(Response.Status.CONFLICT).entity(verificationSessionResponse).build();
+//
+//              return new ClientErrorException(response);
+//            })
+//            .orElseGet(NotFoundException::new);
+//
+//      } else if (unwrappedException instanceof RegistrationServiceSenderException) {
+//
+//        throw unwrappedException;
+//
+//      } else {
+//        logger.error("Registration service failure", unwrappedException);
+//        throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
+//      }
+//    }
 
-        throw new RateLimitExceededException(rateLimitExceededException.getRetryDuration().orElse(null), false);
-      } else if (unwrappedException instanceof RegistrationServiceException registrationServiceException) {
+//    Metrics.counter(CODE_REQUESTED_COUNTER_NAME, Tags.of(
+//            UserAgentTagUtil.getPlatformTag(userAgent),
+//            Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(registrationServiceSession.number())),
+//            Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
+//            Tag.of(VERIFICATION_TRANSPORT_TAG_NAME, verificationCodeRequest.transport().toString())))
+//        .increment();
 
-        throw registrationServiceException.getRegistrationSession()
-            .map(s -> buildResponse(s, verificationSession))
-            .map(verificationSessionResponse -> {
-              final Response response = registrationServiceException instanceof TransportNotAllowedException
-                  ? Response.status(418).entity(verificationSessionResponse).build()
-                  : Response.status(Response.Status.CONFLICT).entity(verificationSessionResponse).build();
-
-              return new ClientErrorException(response);
-            })
-            .orElseGet(NotFoundException::new);
-
-      } else if (unwrappedException instanceof RegistrationServiceSenderException) {
-
-        throw unwrappedException;
-
-      } else {
-        logger.error("Registration service failure", unwrappedException);
-        throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
-      }
-    }
-
-    Metrics.counter(CODE_REQUESTED_COUNTER_NAME, Tags.of(
-            UserAgentTagUtil.getPlatformTag(userAgent),
-            Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(registrationServiceSession.number())),
-            Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
-            Tag.of(VERIFICATION_TRANSPORT_TAG_NAME, verificationCodeRequest.transport().toString())))
-        .increment();
-
-    return buildResponse(resultSession, verificationSession);
+//    return buildResponse(resultSession, verificationSession);
   }
 
   @PUT
@@ -525,13 +557,15 @@ public class VerificationController {
     final RegistrationServiceSession registrationServiceSession = retrieveRegistrationServiceSession(encodedSessionId);
     final VerificationSession verificationSession = retrieveVerificationSession(registrationServiceSession);
 
-    if (registrationServiceSession.verified()) {
-      final VerificationSessionResponse verificationSessionResponse = buildResponse(registrationServiceSession,
-          verificationSession);
+//    if (registrationServiceSession.verified()) {
+//      final VerificationSessionResponse verificationSessionResponse = buildResponse(registrationServiceSession,
+//          verificationSession);
+//
+//      throw new ClientErrorException(
+//          Response.status(Response.Status.CONFLICT).entity(verificationSessionResponse).build());
+//    }
 
-      throw new ClientErrorException(
-          Response.status(Response.Status.CONFLICT).entity(verificationSessionResponse).build());
-    }
+    logger.info("verifyCode here1");
 
     final RegistrationServiceSession resultSession;
     try {
@@ -539,23 +573,27 @@ public class VerificationController {
               submitVerificationCodeRequest.code(),
               REGISTRATION_RPC_TIMEOUT)
           .join();
+      logger.info("verifyCode here2");
     } catch (final CancellationException e) {
       logger.warn("Unexpected cancellation from registration service", e);
       throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
     } catch (final CompletionException e) {
+      logger.info("verifyCode here3");
       final Throwable unwrappedException = ExceptionUtils.unwrap(e);
       if (unwrappedException instanceof RateLimitExceededException rateLimitExceededException) {
+        logger.info("verifyCode here4");
 
         if (rateLimitExceededException instanceof VerificationSessionRateLimitExceededException ve) {
+          logger.info("verifyCode here5");
           final Response response = buildResponseForRateLimitExceeded(verificationSession, ve.getRegistrationSession(),
               ve.getRetryDuration());
           throw new ClientErrorException(response);
         }
-
+        logger.info("verifyCode here6");
         throw new RateLimitExceededException(rateLimitExceededException.getRetryDuration().orElse(null), false);
 
       } else if (unwrappedException instanceof RegistrationServiceException registrationServiceException) {
-
+        logger.info("verifyCode here7");
         throw registrationServiceException.getRegistrationSession()
             .map(s -> buildResponse(s, verificationSession))
             .map(verificationSessionResponse -> new ClientErrorException(
@@ -567,18 +605,19 @@ public class VerificationController {
         throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR);
       }
     }
-
+    logger.info("verifyCode here8");
     if (resultSession.verified()) {
+      logger.info("verifyCode here9");
       registrationRecoveryPasswordsManager.removeForNumber(registrationServiceSession.number());
     }
-
+    logger.info("verifyCode here10");
     Metrics.counter(VERIFIED_COUNTER_NAME, Tags.of(
             UserAgentTagUtil.getPlatformTag(userAgent),
             Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(registrationServiceSession.number())),
             Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
             Tag.of(SUCCESS_TAG_NAME, Boolean.toString(resultSession.verified()))))
         .increment();
-
+    logger.info("verifyCode here11");
     return buildResponse(resultSession, verificationSession);
   }
 

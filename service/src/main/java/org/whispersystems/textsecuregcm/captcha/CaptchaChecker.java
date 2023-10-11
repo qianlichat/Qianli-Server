@@ -59,10 +59,12 @@ public class CaptchaChecker {
       final Action expectedAction,
       final String input,
       final String ip) throws IOException {
+    logger.info("/session/{sessionId captcha verify");
     final String[] parts = input.split("\\" + SEPARATOR, 4);
 
     // we allow missing actions, if we're missing 1 part, assume it's the action
     if (parts.length < 4) {
+      logger.info("/session/{sessionId captcha verify 1");
       throw new BadRequestException("too few parts");
     }
 
@@ -78,6 +80,8 @@ public class CaptchaChecker {
       provider = prefix.substring(0, prefix.length() - SHORT_SUFFIX.length());
       token = shortCodeExpander.retrieve(token).orElseThrow(() -> new BadRequestException("invalid shortcode"));
     }
+
+    logger.info("/session/{sessionId captcha provider = "+provider);
 
     final CaptchaClient client = this.captchaClientMap.get(provider);
     if (client == null) {
@@ -101,8 +105,9 @@ public class CaptchaChecker {
       Metrics.counter(INVALID_SITEKEY_COUNTER_NAME, "action", action).increment();
       throw new BadRequestException("invalid captcha site-key");
     }
-
+    logger.info("/session/{sessionId captcha call ..");
     final AssessmentResult result = client.verify(siteKey, parsedAction, token, ip);
+    logger.info("/session/{sessionId captcha call finished..");
     Metrics.counter(ASSESSMENTS_COUNTER_NAME,
             "action", action,
             "score", result.getScoreString(),

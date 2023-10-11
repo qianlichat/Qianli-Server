@@ -10,10 +10,6 @@ logging:
       threshold: ALL
       timeZone: UTC
       target: stdout
-    - type: logstashtcpsocket
-      destination: example.com:10516
-      apiKey: secret://datadog.apiKey
-      environment: staging
 
 metrics:
   reporters:
@@ -45,36 +41,8 @@ adminEventLoggingConfiguration:
     {
       "key": "value"
     }
-  projectId: some-project-id
-  logName: some-log-name
-
-grpcPort: 8080
-
-stripe:
-  apiKey: secret://stripe.apiKey
-  idempotencyKeyGenerator: secret://stripe.idempotencyKeyGenerator
-  boostDescription: >
-    Example
-  supportedCurrenciesByPaymentMethod:
-    CARD:
-      - usd
-      - eur
-    SEPA_DEBIT:
-      - eur
-
-
-braintree:
-  merchantId: unset
-  publicKey: unset
-  privateKey: secret://braintree.privateKey
-  environment: unset
-  graphqlUrl: unset
-  merchantAccounts:
-    # ISO 4217 currency code and its corresponding sub-merchant account
-    'xts': unset
-  supportedCurrenciesByPaymentMethod:
-    PAYPAL:
-      - usd
+  projectId: qianli-chat
+  logName: qianli-server
 
 dynamoDbClientConfiguration:
   region: us-west-2 # AWS Region
@@ -141,41 +109,7 @@ pushSchedulerCluster: # Redis server configuration for push scheduler cluster
   configurationUri: redis://redis.example.com:6379/
 
 rateLimitersCluster: # Redis server configuration for rate limiters cluster
-  configurationUri: redis://redis.example.com:6379/
-
-directoryV2:
-  client: # Configuration for interfacing with Contact Discovery Service v2 cluster
-    userAuthenticationTokenSharedSecret: secret://directoryV2.client.userAuthenticationTokenSharedSecret
-    userIdTokenSharedSecret: secret://directoryV2.client.userIdTokenSharedSecret
-
-svr2:
-  uri: svr2.example.com
-  userAuthenticationTokenSharedSecret: secret://svr2.userAuthenticationTokenSharedSecret
-  userIdTokenSharedSecret: secret://svr2.userIdTokenSharedSecret
-  svrCaCertificates:
-    - |
-      -----BEGIN CERTIFICATE-----
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      AAAAAAAAAAAAAAAAAAAA
-      -----END CERTIFICATE-----
-
+  configurationUri: redis://127.0.0.1:6379
 
 messageCache: # Redis server configuration for message store cache
   persistDelayMinutes: 1
@@ -233,8 +167,6 @@ recaptcha:
   projectPath: projects/example
   credentialConfigurationJson: "{ }" # service account configuration for backend authentication
 
-hCaptcha:
-  apiKey: secret://hCaptcha.apiKey
 
 shortCode:
   baseUrl: https://example.com/shortcodes/
@@ -243,33 +175,6 @@ storageService:
   uri: storage.example.com
   userAuthenticationTokenSharedSecret: secret://storageService.userAuthenticationTokenSharedSecret
   storageCaCertificates:
-    - |
-      -----BEGIN CERTIFICATE-----
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
-      AAAAAAAAAAAAAAAAAAAA
-      -----END CERTIFICATE-----
-
-backupService:
-  uri: backup.example.com
-  userAuthenticationTokenSharedSecret: secret://backupService.userAuthenticationTokenSharedSecret
-  backupCaCertificates:
     - |
       -----BEGIN CERTIFICATE-----
       ABCDEFGHIJKLMNOPQRSTUVWXYZ/0123456789+abcdefghijklmnopqrstuvwxyz
@@ -320,20 +225,6 @@ remoteConfig:
   globalConfig: # keys and values that are given to clients on GET /v1/config
     EXAMPLE_KEY: VALUE
 
-paymentsService:
-  userAuthenticationTokenSharedSecret: secret://paymentsService.userAuthenticationTokenSharedSecret
-  fixerApiKey: secret://paymentsService.fixerApiKey
-  coinMarketCapApiKey: secret://paymentsService.coinMarketCapApiKey
-  coinMarketCapCurrencyIds:
-    MOB: 7878
-  paymentCurrencies:
-    # list of symbols for supported currencies
-    - MOB
-
-artService:
-  userAuthenticationTokenSharedSecret: secret://artService.userAuthenticationTokenSharedSecret
-  userAuthenticationTokenUserIdSecret: secret://artService.userAuthenticationTokenUserIdSecret
-
 badges:
   badges:
     - id: TEST
@@ -353,42 +244,6 @@ badges:
     - TEST
   receiptLevels:
     '1': TEST
-
-subscription: # configuration for Stripe subscriptions
-  badgeGracePeriod: P15D
-  levels:
-    500:
-      badge: EXAMPLE
-      prices:
-        # list of ISO 4217 currency codes and amounts for the given badge level
-        xts:
-          amount: '10'
-          processorIds:
-            STRIPE: price_example   # stripe Price ID
-            BRAINTREE: plan_example # braintree Plan ID
-
-oneTimeDonations:
-  sepaMaxTransactionSizeEuros: '10000'
-  boost:
-    level: 1
-    expiration: P90D
-    badge: EXAMPLE
-  gift:
-    level: 10
-    expiration: P90D
-    badge: EXAMPLE
-  currencies:
-    # ISO 4217 currency codes and amounts in those currencies
-    xts:
-      minimum: '0.5'
-      gift: '2'
-      boosts:
-        - '1'
-        - '2'
-        - '4'
-        - '8'
-        - '20'
-        - '40'
 
 registrationService:
   host: registration.example.com

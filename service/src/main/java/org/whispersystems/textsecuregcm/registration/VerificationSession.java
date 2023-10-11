@@ -9,6 +9,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.Instant;
 import java.util.List;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.whispersystems.textsecuregcm.controllers.VerificationController;
 import org.whispersystems.textsecuregcm.storage.SerializedExpireableJsonDynamoStore;
 
 /**
@@ -34,6 +37,14 @@ public record VerificationSession(@Nullable String pushChallenge,
                                   boolean allowedToRequestCode, long createdTimestamp, long updatedTimestamp,
                                   long remoteExpirationSeconds) implements
     SerializedExpireableJsonDynamoStore.Expireable {
+  private static final Logger logger = LoggerFactory.getLogger(VerificationSession.class);
+
+  public VerificationSession {
+    allowedToRequestCode = false;
+//    if(!allowedToRequestCode){
+//      logger.error("construct a none code verification",new Throwable());
+//    }
+  }
 
   @Override
   public long getExpirationEpochSeconds() {

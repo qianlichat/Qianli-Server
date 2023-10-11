@@ -33,6 +33,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.auth.BasicAuthorizationHeader;
 import org.whispersystems.textsecuregcm.auth.PhoneVerificationTokenManager;
 import org.whispersystems.textsecuregcm.auth.RegistrationLockVerificationManager;
@@ -42,6 +44,7 @@ import org.whispersystems.textsecuregcm.entities.RegistrationLockFailure;
 import org.whispersystems.textsecuregcm.entities.RegistrationRequest;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.metrics.ReportedMessageMetricsListener;
 import org.whispersystems.textsecuregcm.metrics.UserAgentTagUtil;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
@@ -85,6 +88,8 @@ public class RegistrationController {
     this.rateLimiters = rateLimiters;
   }
 
+  private static final Logger logger = LoggerFactory.getLogger(RegistrationController.class);
+
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
   @Produces(MediaType.APPLICATION_JSON)
@@ -113,23 +118,25 @@ public class RegistrationController {
     final String number = authorizationHeader.getUsername();
     final String password = authorizationHeader.getPassword();
 
+    logger.info("register number="+number+", password="+password);
+
     RateLimiter.adaptLegacyException(() -> rateLimiters.getRegistrationLimiter().validate(number));
     if (!AccountsManager.validNewAccountAttributes(registrationRequest.accountAttributes())) {
       Metrics.counter(INVALID_ACCOUNT_ATTRS_COUNTER_NAME, Tags.of(UserAgentTagUtil.getPlatformTag(userAgent))).increment();
       throw new WebApplicationException(Response.status(422, "account attributes invalid").build());
     }
-
+    logger.info("register number="+number+", password="+password+", here1");
     final PhoneVerificationRequest.VerificationType verificationType = phoneVerificationTokenManager.verify(number,
         registrationRequest);
-
+    logger.info("register number="+number+", password="+password+", here2");
     final Optional<Account> existingAccount = accounts.getByE164(number);
-
+    logger.info("register number="+number+", password="+password+", here3");
     existingAccount.ifPresent(account -> {
       final Instant accountLastSeen = Instant.ofEpochMilli(account.getLastSeen());
       final Duration timeSinceLastSeen = Duration.between(accountLastSeen, Instant.now());
       REREGISTRATION_IDLE_DAYS_DISTRIBUTION.record(timeSinceLastSeen.toDays());
     });
-
+    logger.info("register number="+number+", password="+password+", here4");
     if (!registrationRequest.skipDeviceTransfer() && existingAccount.map(Account::isTransferSupported).orElse(false)) {
       // If a device transfer is possible, clients must explicitly opt out of a transfer (i.e. after prompting the user)
       // before we'll let them create a new account "from scratch"
@@ -137,23 +144,25 @@ public class RegistrationController {
     }
 
     if (existingAccount.isPresent()) {
+      logger.info("register number="+number+", password="+password+", here5");
       registrationLockVerificationManager.verifyRegistrationLock(existingAccount.get(),
           registrationRequest.accountAttributes().getRegistrationLock(),
           userAgent, RegistrationLockVerificationManager.Flow.REGISTRATION, verificationType);
     }
-
+    logger.info("register number="+number+", password="+password+", here6");
     Account account = accounts.create(number, password, signalAgent, registrationRequest.accountAttributes(),
         existingAccount.map(Account::getBadges).orElseGet(ArrayList::new));
-
+    logger.info("register number="+number+", password="+password+", here7");
     // If the request includes all the information we need to fully "activate" the account, we should do so
     if (registrationRequest.supportsAtomicAccountCreation()) {
+      logger.info("register number="+number+", password="+password+", here8");
       assert registrationRequest.aciIdentityKey().isPresent();
       assert registrationRequest.pniIdentityKey().isPresent();
       assert registrationRequest.deviceActivationRequest().aciSignedPreKey().isPresent();
       assert registrationRequest.deviceActivationRequest().pniSignedPreKey().isPresent();
       assert registrationRequest.deviceActivationRequest().aciPqLastResortPreKey().isPresent();
       assert registrationRequest.deviceActivationRequest().pniPqLastResortPreKey().isPresent();
-
+      logger.info("register number="+number+", password="+password+", here9");
       account = accounts.update(account, a -> {
         a.setIdentityKey(registrationRequest.aciIdentityKey().get());
         a.setPhoneNumberIdentityKey(registrationRequest.pniIdentityKey().get());
@@ -162,7 +171,7 @@ public class RegistrationController {
 
         device.setSignedPreKey(registrationRequest.deviceActivationRequest().aciSignedPreKey().get());
         device.setPhoneNumberIdentitySignedPreKey(registrationRequest.deviceActivationRequest().pniSignedPreKey().get());
-
+        logger.info("register number="+number+", password="+password+", here9.1");
         registrationRequest.deviceActivationRequest().apnToken().ifPresent(apnRegistrationId -> {
           device.setApnId(apnRegistrationId.apnRegistrationId());
           device.setVoipApnId(apnRegistrationId.voipRegistrationId());
@@ -170,6 +179,7 @@ public class RegistrationController {
 
         registrationRequest.deviceActivationRequest().gcmToken().ifPresent(gcmRegistrationId ->
             device.setGcmId(gcmRegistrationId.gcmRegistrationId()));
+        logger.info("register number="+number+", password="+password+", here9.2");
 
         CompletableFuture.allOf(
                 keysManager.storeEcSignedPreKeys(a.getUuid(),
@@ -181,9 +191,12 @@ public class RegistrationController {
                 keysManager.storePqLastResort(a.getPhoneNumberIdentifier(),
                     Map.of(Device.MASTER_ID, registrationRequest.deviceActivationRequest().pniPqLastResortPreKey().get())))
             .join();
+        logger.info("register number="+number+", password="+password+", here9.3");
       });
+      logger.info("register number="+number+", password="+password+", here10");
     }
 
+    logger.info("register number="+number+", password="+password+", here11");
     Metrics.counter(ACCOUNT_CREATED_COUNTER_NAME, Tags.of(UserAgentTagUtil.getPlatformTag(userAgent),
             Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(number)),
             Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(number)),
@@ -191,6 +204,7 @@ public class RegistrationController {
             Tag.of(ACCOUNT_ACTIVATED_TAG_NAME, String.valueOf(account.isEnabled()))))
         .increment();
 
+    logger.info("register number="+number+", password="+password+", here12");
     return new AccountIdentityResponse(account.getUuid(),
         account.getNumber(),
         account.getPhoneNumberIdentifier(),

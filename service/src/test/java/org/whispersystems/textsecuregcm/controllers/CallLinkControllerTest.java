@@ -31,6 +31,7 @@ import org.whispersystems.textsecuregcm.limits.RateLimiters;
 import org.whispersystems.textsecuregcm.mappers.RateLimitExceededExceptionMapper;
 import org.whispersystems.textsecuregcm.tests.util.AuthHelper;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
+import java.util.Base64;
 
 @ExtendWith(DropwizardExtensionsSupport.class)
 public class CallLinkControllerTest {
@@ -58,6 +59,8 @@ public class CallLinkControllerTest {
 
   @Test
   void testGetCreateAuth() {
+    System.out.println("private:" + Base64.getEncoder().withoutPadding().encodeToString(genericServerSecretParams.serialize()));
+    System.out.println("public:" + Base64.getEncoder().withoutPadding().encodeToString(genericServerSecretParams.getPublicParams().serialize()));
     try (Response response = resources.getJerseyTest()
         .target("/v1/call-link/create-auth")
         .request()

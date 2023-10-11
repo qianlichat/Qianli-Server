@@ -16,7 +16,7 @@ import org.whispersystems.textsecuregcm.util.E164;
 // https://github.com/FasterXML/jackson-databind/issues/1497
 public final class CreateVerificationSessionRequest {
 
-  @E164
+//  @E164
   @NotBlank
   @JsonProperty
   private String number;

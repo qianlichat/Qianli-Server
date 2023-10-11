@@ -28,7 +28,6 @@ import org.whispersystems.textsecuregcm.configuration.CdnConfiguration;
 import org.whispersystems.textsecuregcm.configuration.ClientReleaseConfiguration;
 import org.whispersystems.textsecuregcm.configuration.CommandStopListenerConfiguration;
 import org.whispersystems.textsecuregcm.configuration.DogstatsdConfiguration;
-import org.whispersystems.textsecuregcm.configuration.DirectoryV2Configuration;
 import org.whispersystems.textsecuregcm.configuration.DynamoDbClientConfiguration;
 import org.whispersystems.textsecuregcm.configuration.DynamoDbTables;
 import org.whispersystems.textsecuregcm.configuration.FcmConfiguration;
@@ -68,15 +67,15 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private AdminEventLoggingConfiguration adminEventLoggingConfiguration;
 
-  @NotNull
-  @Valid
-  @JsonProperty
-  private StripeConfiguration stripe;
-
-  @NotNull
-  @Valid
-  @JsonProperty
-  private BraintreeConfiguration braintree;
+//  @NotNull
+//  @Valid
+//  @JsonProperty
+//  private StripeConfiguration stripe;
+//
+//  @NotNull
+//  @Valid
+//  @JsonProperty
+//  private BraintreeConfiguration braintree;
 
   @NotNull
   @Valid
@@ -123,15 +122,15 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private RedisClusterConfiguration metricsCluster;
 
-  @NotNull
-  @Valid
-  @JsonProperty
-  private DirectoryV2Configuration directoryV2;
+//  @NotNull
+//  @Valid
+//  @JsonProperty
+//  private DirectoryV2Configuration directoryV2;
 
-  @NotNull
-  @Valid
-  @JsonProperty
-  private SecureValueRecovery2Configuration svr2;
+//  @NotNull
+//  @Valid
+//  @JsonProperty
+//  private SecureValueRecovery2Configuration svr2;
 
   @NotNull
   @Valid
@@ -198,10 +197,10 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private RecaptchaConfiguration recaptcha;
 
-  @Valid
-  @NotNull
-  @JsonProperty
-  private HCaptchaConfiguration hCaptcha;
+//  @Valid
+//  @NotNull
+//  @JsonProperty
+//  private HCaptchaConfiguration hCaptcha;
 
   @Valid
   @NotNull
@@ -213,20 +212,20 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private SecureStorageServiceConfiguration storageService;
 
-  @Valid
-  @NotNull
-  @JsonProperty
-  private SecureBackupServiceConfiguration backupService;
+//  @Valid
+//  @NotNull
+//  @JsonProperty
+//  private SecureBackupServiceConfiguration backupService;
 
-  @Valid
-  @NotNull
-  @JsonProperty
-  private PaymentsServiceConfiguration paymentsService;
+//  @Valid
+//  @NotNull
+//  @JsonProperty
+//  private PaymentsServiceConfiguration paymentsService;
 
-  @Valid
-  @NotNull
-  @JsonProperty
-  private ArtServiceConfiguration artService;
+//  @Valid
+//  @NotNull
+//  @JsonProperty
+//  private ArtServiceConfiguration artService;
 
   @Valid
   @NotNull
@@ -253,15 +252,15 @@ public class WhisperServerConfiguration extends Configuration {
   @JsonProperty
   private BadgesConfiguration badges;
 
-  @Valid
-  @JsonProperty
-  @NotNull
-  private SubscriptionConfiguration subscription;
+//  @Valid
+//  @JsonProperty
+//  @NotNull
+//  private SubscriptionConfiguration subscription;
 
-  @Valid
-  @JsonProperty
-  @NotNull
-  private OneTimeDonationConfiguration oneTimeDonations;
+//  @Valid
+//  @JsonProperty
+//  @NotNull
+//  private OneTimeDonationConfiguration oneTimeDonations;
 
   @Valid
   @NotNull
@@ -316,13 +315,13 @@ public class WhisperServerConfiguration extends Configuration {
     return adminEventLoggingConfiguration;
   }
 
-  public StripeConfiguration getStripe() {
-    return stripe;
-  }
-
-  public BraintreeConfiguration getBraintree() {
-    return braintree;
-  }
+//  public StripeConfiguration getStripe() {
+//    return stripe;
+//  }
+//
+//  public BraintreeConfiguration getBraintree() {
+//    return braintree;
+//  }
 
   public DynamoDbClientConfiguration getDynamoDbClientConfiguration() {
     return dynamoDbClientConfiguration;
@@ -336,9 +335,9 @@ public class WhisperServerConfiguration extends Configuration {
     return recaptcha;
   }
 
-  public HCaptchaConfiguration getHCaptchaConfiguration() {
-    return hCaptcha;
-  }
+//  public HCaptchaConfiguration getHCaptchaConfiguration() {
+//    return hCaptcha;
+//  }
 
   public ShortCodeExpanderConfiguration getShortCodeRetrieverConfiguration() {
     return shortCode;
@@ -368,13 +367,13 @@ public class WhisperServerConfiguration extends Configuration {
     return metricsCluster;
   }
 
-  public SecureValueRecovery2Configuration getSvr2Configuration() {
-    return svr2;
-  }
+//  public SecureValueRecovery2Configuration getSvr2Configuration() {
+//    return svr2;
+//  }
 
-  public DirectoryV2Configuration getDirectoryV2Configuration() {
-    return directoryV2;
-  }
+//  public DirectoryV2Configuration getDirectoryV2Configuration() {
+//    return directoryV2;
+//  }
 
   public SecureStorageServiceConfiguration getSecureStorageServiceConfiguration() {
     return storageService;
@@ -439,17 +438,17 @@ public class WhisperServerConfiguration extends Configuration {
     return results;
   }
 
-  public SecureBackupServiceConfiguration getSecureBackupServiceConfiguration() {
-    return backupService;
-  }
+//  public SecureBackupServiceConfiguration getSecureBackupServiceConfiguration() {
+//    return backupService;
+//  }
 
-  public PaymentsServiceConfiguration getPaymentsServiceConfiguration() {
-    return paymentsService;
-  }
+//  public PaymentsServiceConfiguration getPaymentsServiceConfiguration() {
+//    return paymentsService;
+//  }
 
-  public ArtServiceConfiguration getArtServiceConfiguration() {
-    return artService;
-  }
+//  public ArtServiceConfiguration getArtServiceConfiguration() {
+//    return artService;
+//  }
 
   public ZkConfig getZkConfig() {
     return zkConfig;
@@ -471,13 +470,13 @@ public class WhisperServerConfiguration extends Configuration {
     return badges;
   }
 
-  public SubscriptionConfiguration getSubscription() {
-    return subscription;
-  }
+//  public SubscriptionConfiguration getSubscription() {
+//    return subscription;
+//  }
 
-  public OneTimeDonationConfiguration getOneTimeDonations() {
-    return oneTimeDonations;
-  }
+//  public OneTimeDonationConfiguration getOneTimeDonations() {
+//    return oneTimeDonations;
+//  }
 
   public ReportMessageConfiguration getReportMessageConfiguration() {
     return reportMessage;

@@ -97,12 +97,12 @@ record CommandDependencies(
     ScheduledExecutorService storageServiceRetryExecutor = environment.lifecycle()
         .scheduledExecutorService(name(name, "storageServiceRetry-%d")).threads(1).build();
 
-    ExternalServiceCredentialsGenerator backupCredentialsGenerator = SecureBackupController.credentialsGenerator(
-        configuration.getSecureBackupServiceConfiguration());
+//    ExternalServiceCredentialsGenerator backupCredentialsGenerator = SecureBackupController.credentialsGenerator(
+//        configuration.getSecureBackupServiceConfiguration());
     ExternalServiceCredentialsGenerator storageCredentialsGenerator = SecureStorageController.credentialsGenerator(
         configuration.getSecureStorageServiceConfiguration());
-    ExternalServiceCredentialsGenerator secureValueRecoveryCredentialsGenerator = SecureValueRecovery2Controller.credentialsGenerator(
-        configuration.getSvr2Configuration());
+//    ExternalServiceCredentialsGenerator secureValueRecoveryCredentialsGenerator = SecureValueRecovery2Controller.credentialsGenerator(
+//        configuration.getSvr2Configuration());
 
     DynamicConfigurationManager<DynamicConfiguration> dynamicConfigurationManager = new DynamicConfigurationManager<>(
         configuration.getAppConfig().getApplication(), configuration.getAppConfig().getEnvironment(),
@@ -160,13 +160,13 @@ record CommandDependencies(
         configuration.getClientPresenceClusterConfiguration(), redisClusterClientResources);
     FaultTolerantRedisCluster rateLimitersCluster = new FaultTolerantRedisCluster("rate_limiters",
         configuration.getRateLimitersCluster(), redisClusterClientResources);
-    SecureBackupClient secureBackupClient = new SecureBackupClient(backupCredentialsGenerator,
-        secureValueRecoveryServiceExecutor, secureValueRecoveryServiceRetryExecutor,
-        configuration.getSecureBackupServiceConfiguration());
-    SecureValueRecovery2Client secureValueRecovery2Client = new SecureValueRecovery2Client(
-        secureValueRecoveryCredentialsGenerator, secureValueRecoveryServiceExecutor,
-        secureValueRecoveryServiceRetryExecutor,
-        configuration.getSvr2Configuration());
+//    SecureBackupClient secureBackupClient = new SecureBackupClient(backupCredentialsGenerator,
+//        secureValueRecoveryServiceExecutor, secureValueRecoveryServiceRetryExecutor,
+//        configuration.getSecureBackupServiceConfiguration());
+//    SecureValueRecovery2Client secureValueRecovery2Client = new SecureValueRecovery2Client(
+//        secureValueRecoveryCredentialsGenerator, secureValueRecoveryServiceExecutor,
+//        secureValueRecoveryServiceRetryExecutor,
+//        configuration.getSvr2Configuration());
     SecureStorageClient secureStorageClient = new SecureStorageClient(storageCredentialsGenerator,
         storageServiceExecutor, storageServiceRetryExecutor, configuration.getSecureStorageServiceConfiguration());
     ClientPresenceManager clientPresenceManager = new ClientPresenceManager(clientPresenceCluster,
@@ -185,7 +185,7 @@ record CommandDependencies(
         configuration.getDynamoDbTables().getDeletedAccountsLock().getTableName());
     AccountsManager accountsManager = new AccountsManager(accounts, phoneNumberIdentifiers, cacheCluster,
         accountLockManager, keys, messagesManager, profilesManager,
-            secureStorageClient, secureBackupClient, secureValueRecovery2Client,
+            secureStorageClient, /*secureBackupClient, secureValueRecovery2Client,*/
         clientPresenceManager,
         experimentEnrollmentManager, registrationRecoveryPasswordsManager, accountLockExecutor, clock);
 

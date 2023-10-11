@@ -13,10 +13,14 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.configuration.dynamic.DynamicConfiguration;
+import org.whispersystems.textsecuregcm.controllers.RegistrationController;
 import org.whispersystems.textsecuregcm.entities.ECPreKey;
 import org.whispersystems.textsecuregcm.entities.ECSignedPreKey;
 import org.whispersystems.textsecuregcm.entities.KEMSignedPreKey;
+import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 public class KeysManager {
@@ -73,11 +77,16 @@ public class KeysManager {
 
     return CompletableFuture.allOf(storeFutures.toArray(new CompletableFuture[0]));
   }
-
+  private static final Logger logger = LoggerFactory.getLogger(KeysManager.class);
   public CompletableFuture<Void> storeEcSignedPreKeys(final UUID identifier, final Map<Long, ECSignedPreKey> keys) {
+    logger.info("register storeEcSignedPreKeys:" + identifier);
     if (dynamicConfigurationManager.getConfiguration().getEcPreKeyMigrationConfiguration().storeEcSignedPreKeys()) {
-      return ecSignedPreKeys.store(identifier, keys);
+      logger.info("register storeEcSignedPreKeys 1");
+      final CompletableFuture<Void> store = ecSignedPreKeys.store(identifier, keys);
+      logger.info("register storeEcSignedPreKeys 1.1");
+      return store;
     } else {
+      logger.info("register storeEcSignedPreKeys 2");
       return CompletableFuture.completedFuture(null);
     }
   }
@@ -87,7 +96,10 @@ public class KeysManager {
   }
 
   public CompletableFuture<Void> storePqLastResort(final UUID identifier, final Map<Long, KEMSignedPreKey> keys) {
-    return pqLastResortKeys.store(identifier, keys);
+    logger.info("register storePqLastResort:" + identifier);
+    final CompletableFuture<Void> store = pqLastResortKeys.store(identifier, keys);
+    logger.info("register done:" + identifier);
+    return store;
   }
 
   public CompletableFuture<Void> storeEcOneTimePreKeys(final UUID identifier, final long deviceId, final List<ECPreKey> preKeys) {
@@ -129,15 +141,27 @@ public class KeysManager {
   public CompletableFuture<Integer> getPqCount(final UUID identifier, final long deviceId) {
     return pqPreKeys.getCount(identifier, deviceId);
   }
-  
+
   public CompletableFuture<Void> delete(final UUID accountUuid) {
     return CompletableFuture.allOf(
-            ecPreKeys.delete(accountUuid),
-            pqPreKeys.delete(accountUuid),
+            ecPreKeys.delete(accountUuid).exceptionally(throwable -> {
+              logger.error("delete ecPreKeys accountUuid error for " + accountUuid,throwable);
+              throw ExceptionUtils.wrap(throwable);
+            }),
+            pqPreKeys.delete(accountUuid).exceptionally(throwable -> {
+              logger.error("delete pqPreKeys accountUuid error for " + accountUuid,throwable);
+              throw ExceptionUtils.wrap(throwable);
+            }),
             dynamicConfigurationManager.getConfiguration().getEcPreKeyMigrationConfiguration().deleteEcSignedPreKeys()
-                ? ecSignedPreKeys.delete(accountUuid)
+                ? ecSignedPreKeys.delete(accountUuid).exceptionally(throwable -> {
+              logger.error("delete ecSignedPreKeys accountUuid error for " + accountUuid,throwable);
+              throw ExceptionUtils.wrap(throwable);
+            })
                 : CompletableFuture.completedFuture(null),
-            pqLastResortKeys.delete(accountUuid));
+            pqLastResortKeys.delete(accountUuid)).exceptionally(throwable -> {
+            logger.error("delete pqLastResortKeys accountUuid error for " + accountUuid,throwable);
+            throw ExceptionUtils.wrap(throwable);
+          });
   }
 
   public CompletableFuture<Void> delete(final UUID accountUuid, final long deviceId) {
