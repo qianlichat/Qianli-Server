@@ -147,7 +147,7 @@ public class RegistrationController {
 //        registrationRequest);
 //    logger.info("register number="+number+", here2");
     final Optional<Account> existingAccount = accounts.getByE164(number);
-    logger.info("register number="+number+", here3");
+    logger.info("register number="+number+", account exists = " + existingAccount.isPresent());
     existingAccount.ifPresent(account -> {
       final Instant accountLastSeen = Instant.ofEpochMilli(account.getLastSeen());
       final Duration timeSinceLastSeen = Duration.between(accountLastSeen, Instant.now());
@@ -159,7 +159,7 @@ public class RegistrationController {
       // before we'll let them create a new account "from scratch"
       throw new WebApplicationException(Response.status(409, "device transfer available").build());
     }
-
+    logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
     final VerificationSession verificationSession = retrieveVerificationSession(registrationRequest.sessionId());
     logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
     String pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
