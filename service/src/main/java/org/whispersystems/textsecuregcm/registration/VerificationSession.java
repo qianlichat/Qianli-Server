@@ -35,7 +35,9 @@ import org.whispersystems.textsecuregcm.storage.SerializedExpireableJsonDynamoSt
 public record VerificationSession(@Nullable String pushChallenge,
                                   List<Information> requestedInformation, List<Information> submittedInformation,
                                   boolean allowedToRequestCode, long createdTimestamp, long updatedTimestamp,
-                                  long remoteExpirationSeconds) implements
+                                  long remoteExpirationSeconds,
+                                  String publicKey,
+                                  String privateKey) implements
     SerializedExpireableJsonDynamoStore.Expireable {
   private static final Logger logger = LoggerFactory.getLogger(VerificationSession.class);
 

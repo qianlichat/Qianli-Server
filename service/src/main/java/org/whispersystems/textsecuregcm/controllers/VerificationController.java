@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Clock;
@@ -84,6 +85,7 @@ import org.whispersystems.textsecuregcm.storage.VerificationSessionManager;
 import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import org.whispersystems.textsecuregcm.util.HeaderUtils;
 import org.whispersystems.textsecuregcm.util.Pair;
+import org.whispersystems.textsecuregcm.util.RSAUtils;
 import org.whispersystems.textsecuregcm.util.Util;
 
 @Path("/v1/verification")
@@ -183,9 +185,18 @@ public class VerificationController {
       throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR, e);
     }
 
+    final KeyPair generate = RSAUtils.generate();
+
+    String testStr = "hello world!";
+    final String encrypted = RSAUtils.encrypt(testStr, generate.getPublic());
+    final String decrypted = RSAUtils.decrypt(encrypted,generate.getPrivate());
+    logger.info("rsa utils test : " + decrypted);
+
     VerificationSession verificationSession = new VerificationSession(null, new ArrayList<>(),
         Collections.emptyList(), false,
-        clock.millis(), clock.millis(), registrationServiceSession.expiration());
+        clock.millis(), clock.millis(), registrationServiceSession.expiration(),
+        RSAUtils.keyToBase64(generate.getPublic()),
+        RSAUtils.keyToBase64(generate.getPrivate()));
 
 //    verificationSession = handlePushToken(pushTokenAndType, verificationSession);
     // unconditionally request a captcha -- it will either be the only requested information, or a fallback
@@ -285,9 +296,13 @@ public class VerificationController {
         requestedInformation.add(VerificationSession.Information.PUSH_CHALLENGE);
         requestedInformation.addAll(verificationSession.requestedInformation());
 
+        final KeyPair generate = RSAUtils.generate();
+
         verificationSession = new VerificationSession(generatePushChallenge(), requestedInformation,
             verificationSession.submittedInformation(), verificationSession.allowedToRequestCode(),
-            verificationSession.createdTimestamp(), clock.millis(), verificationSession.remoteExpirationSeconds()
+            verificationSession.createdTimestamp(), clock.millis(), verificationSession.remoteExpirationSeconds(),
+            RSAUtils.keyToBase64(generate.getPublic()),
+            RSAUtils.keyToBase64(generate.getPrivate())
         );
       }
 
@@ -356,9 +371,13 @@ public class VerificationController {
         requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE);
       }
 
+      final KeyPair generate = RSAUtils.generate();
+
       verificationSession = new VerificationSession(verificationSession.pushChallenge(), requestedInformation,
           submittedInformation, false, verificationSession.createdTimestamp(), clock.millis(),
-          verificationSession.remoteExpirationSeconds());
+          verificationSession.remoteExpirationSeconds(),
+          RSAUtils.keyToBase64(generate.getPublic()),
+          RSAUtils.keyToBase64(generate.getPrivate()));
 
     } else if (pushChallengePresent) {
       throw new ForbiddenException();
@@ -374,71 +393,71 @@ public class VerificationController {
    * @throws ForbiddenException         if assessment is not valid.
    * @throws RateLimitExceededException if too many captchas have been submitted
    */
-  private VerificationSession handleCaptcha(
-      final String sourceHost,
-      final UpdateVerificationSessionRequest updateVerificationSessionRequest,
-      final RegistrationServiceSession registrationServiceSession,
-      VerificationSession verificationSession,
-      final String userAgent,
-      final Optional<Float> captchaScoreThreshold) throws RateLimitExceededException {
-
-    if (updateVerificationSessionRequest.captcha() == null) {
-      logger.info("/session/{sessionId here0");
-      return verificationSession;
-    }
-    logger.info("/session/{sessionId here0.1");
-
-    RateLimiter.adaptLegacyException(
-        () -> rateLimiters.getVerificationCaptchaLimiter().validate(registrationServiceSession.encodedSessionId()));
-    logger.info("/session/{sessionId here0.2");
-    final AssessmentResult assessmentResult;
-    try {
-      logger.info("/session/{sessionId captcha="+updateVerificationSessionRequest.captcha());
-      logger.info("/session/{sessionId sourceHost="+sourceHost);
-      assessmentResult = registrationCaptchaManager.assessCaptcha(
-              Optional.of(updateVerificationSessionRequest.captcha()), sourceHost)
-          .orElseThrow(() -> new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR));
-      logger.info("/session/{sessionId here0.3");
-      Metrics.counter(CAPTCHA_ATTEMPT_COUNTER_NAME, Tags.of(
-              Tag.of(SUCCESS_TAG_NAME, String.valueOf(assessmentResult.isValid(captchaScoreThreshold))),
-              UserAgentTagUtil.getPlatformTag(userAgent),
-              Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(registrationServiceSession.number())),
-              Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
-              Tag.of(SCORE_TAG_NAME, assessmentResult.getScoreString())))
-          .increment();
-      logger.info("/session/{sessionId here0.4");
-    } catch (IOException e) {
-      logger.info("/session/{sessionId here0.5");
-      throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
-    }
-    logger.info("/session/{sessionId here0.6");
-
-    if (assessmentResult.isValid(captchaScoreThreshold)) {
-      logger.info("/session/{sessionId here0.7");
-      final List<VerificationSession.Information> submittedInformation = new ArrayList<>(
-          verificationSession.submittedInformation());
-      submittedInformation.add(VerificationSession.Information.CAPTCHA);
-      logger.info("/session/{sessionId here0.8");
-      final List<VerificationSession.Information> requestedInformation = new ArrayList<>(
-          verificationSession.requestedInformation());
-      logger.info("/session/{sessionId here0.88");
-      // a captcha satisfies a push challenge, in case of push deliverability issues
-      requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE);
-      logger.info("/session/{sessionId here0.9");
-      final boolean allowedToRequestCode = (verificationSession.allowedToRequestCode()
-          || requestedInformation.remove(VerificationSession.Information.CAPTCHA))
-          && requestedInformation.isEmpty();
-      logger.info("/session/{sessionId here0.91");
-      verificationSession = new VerificationSession(verificationSession.pushChallenge(), requestedInformation,
-          submittedInformation, allowedToRequestCode, verificationSession.createdTimestamp(), clock.millis(),
-          verificationSession.remoteExpirationSeconds());
-    } else {
-      logger.info("/session/{sessionId here0.92");
-      throw new ForbiddenException();
-    }
-    logger.info("/session/{sessionId here0.93");
-    return verificationSession;
-  }
+//  private VerificationSession handleCaptcha(
+//      final String sourceHost,
+//      final UpdateVerificationSessionRequest updateVerificationSessionRequest,
+//      final RegistrationServiceSession registrationServiceSession,
+//      VerificationSession verificationSession,
+//      final String userAgent,
+//      final Optional<Float> captchaScoreThreshold) throws RateLimitExceededException {
+//
+//    if (updateVerificationSessionRequest.captcha() == null) {
+//      logger.info("/session/{sessionId here0");
+//      return verificationSession;
+//    }
+//    logger.info("/session/{sessionId here0.1");
+//
+//    RateLimiter.adaptLegacyException(
+//        () -> rateLimiters.getVerificationCaptchaLimiter().validate(registrationServiceSession.encodedSessionId()));
+//    logger.info("/session/{sessionId here0.2");
+//    final AssessmentResult assessmentResult;
+//    try {
+//      logger.info("/session/{sessionId captcha="+updateVerificationSessionRequest.captcha());
+//      logger.info("/session/{sessionId sourceHost="+sourceHost);
+//      assessmentResult = registrationCaptchaManager.assessCaptcha(
+//              Optional.of(updateVerificationSessionRequest.captcha()), sourceHost)
+//          .orElseThrow(() -> new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR));
+//      logger.info("/session/{sessionId here0.3");
+//      Metrics.counter(CAPTCHA_ATTEMPT_COUNTER_NAME, Tags.of(
+//              Tag.of(SUCCESS_TAG_NAME, String.valueOf(assessmentResult.isValid(captchaScoreThreshold))),
+//              UserAgentTagUtil.getPlatformTag(userAgent),
+//              Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(registrationServiceSession.number())),
+//              Tag.of(REGION_CODE_TAG_NAME, Util.getRegion(registrationServiceSession.number())),
+//              Tag.of(SCORE_TAG_NAME, assessmentResult.getScoreString())))
+//          .increment();
+//      logger.info("/session/{sessionId here0.4");
+//    } catch (IOException e) {
+//      logger.info("/session/{sessionId here0.5");
+//      throw new ServerErrorException(Response.Status.SERVICE_UNAVAILABLE);
+//    }
+//    logger.info("/session/{sessionId here0.6");
+//
+//    if (assessmentResult.isValid(captchaScoreThreshold)) {
+//      logger.info("/session/{sessionId here0.7");
+//      final List<VerificationSession.Information> submittedInformation = new ArrayList<>(
+//          verificationSession.submittedInformation());
+//      submittedInformation.add(VerificationSession.Information.CAPTCHA);
+//      logger.info("/session/{sessionId here0.8");
+//      final List<VerificationSession.Information> requestedInformation = new ArrayList<>(
+//          verificationSession.requestedInformation());
+//      logger.info("/session/{sessionId here0.88");
+//      // a captcha satisfies a push challenge, in case of push deliverability issues
+//      requestedInformation.remove(VerificationSession.Information.PUSH_CHALLENGE);
+//      logger.info("/session/{sessionId here0.9");
+//      final boolean allowedToRequestCode = (verificationSession.allowedToRequestCode()
+//          || requestedInformation.remove(VerificationSession.Information.CAPTCHA))
+//          && requestedInformation.isEmpty();
+//      logger.info("/session/{sessionId here0.91");
+//      verificationSession = new VerificationSession(verificationSession.pushChallenge(), requestedInformation,
+//          submittedInformation, allowedToRequestCode, verificationSession.createdTimestamp(), clock.millis(),
+//          verificationSession.remoteExpirationSeconds());
+//    } else {
+//      logger.info("/session/{sessionId here0.92");
+//      throw new ForbiddenException();
+//    }
+//    logger.info("/session/{sessionId here0.93");
+//    return verificationSession;
+//  }
 
   @GET
   @Path("/session/{sessionId}")
@@ -710,7 +729,8 @@ public class VerificationController {
         registrationServiceSession.nextSms(),
         registrationServiceSession.nextVoiceCall(), registrationServiceSession.nextVerificationAttempt(),
         verificationSession.allowedToRequestCode(), verificationSession.requestedInformation(),
-        registrationServiceSession.verified());
+        registrationServiceSession.verified(),
+        verificationSession.publicKey());
   }
 
   public static byte[] decodeSessionId(final String sessionId) {
