@@ -75,19 +75,21 @@ public class Util {
   }
 
   public static String getCountryCode(String number) {
-    Matcher matcher = COUNTRY_CODE_PATTERN.matcher(number);
-
-    if (matcher.find()) return matcher.group(1);
-    else                return "0";
+    return "0";
+//    Matcher matcher = COUNTRY_CODE_PATTERN.matcher(number);
+//
+//    if (matcher.find()) return matcher.group(1);
+//    else                return "0";
   }
 
   public static String getRegion(final String number) {
-    try {
-      final PhoneNumber phoneNumber = PHONE_NUMBER_UTIL.parse(number, null);
-      return StringUtils.defaultIfBlank(PHONE_NUMBER_UTIL.getRegionCodeForNumber(phoneNumber), "ZZ");
-    } catch (final NumberParseException e) {
-      return "ZZ";
-    }
+    return "ZZ";
+//    try {
+//      final PhoneNumber phoneNumber = PHONE_NUMBER_UTIL.parse(number, null);
+//      return StringUtils.defaultIfBlank(PHONE_NUMBER_UTIL.getRegionCodeForNumber(phoneNumber), "ZZ");
+//    } catch (final NumberParseException e) {
+//      return "ZZ";
+//    }
   }
 
   public static String getNumberPrefix(String number) {

@@ -47,6 +47,9 @@ public class Account {
   private String number;
 
   @JsonProperty
+  private String pwd; //sha-256
+
+  @JsonProperty
   @JsonSerialize(using = ByteArrayBase64UrlAdapter.Serializing.class)
   @JsonDeserialize(using = ByteArrayBase64UrlAdapter.Deserializing.class)
   @Nullable
@@ -122,6 +125,14 @@ public class Account {
     requireNotStale();
 
     this.uuid = uuid;
+  }
+
+  public String getPwd(){
+    return pwd;
+  }
+
+  public void setPwd(String pwd){
+    this.pwd = pwd;
   }
 
   public UUID getPhoneNumberIdentifier() {

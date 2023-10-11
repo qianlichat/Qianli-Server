@@ -36,6 +36,7 @@ public record VerificationSession(@Nullable String pushChallenge,
                                   List<Information> requestedInformation, List<Information> submittedInformation,
                                   boolean allowedToRequestCode, long createdTimestamp, long updatedTimestamp,
                                   long remoteExpirationSeconds,
+                                  String accountName,
                                   String publicKey,
                                   String privateKey) implements
     SerializedExpireableJsonDynamoStore.Expireable {

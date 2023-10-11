@@ -770,7 +770,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
             profileBadgeConverter, config.getBadges(), cdnS3Client, profileCdnPolicyGenerator, profileCdnPolicySigner,
             config.getCdnConfiguration().bucket(), zkProfileOperations, batchIdentityCheckExecutor),
         new ProvisioningController(rateLimiters, provisioningManager),
-        new RegistrationController(accountsManager, phoneVerificationTokenManager, registrationLockVerificationManager,
+        new RegistrationController(accountsManager,new VerificationSessionManager(verificationSessions), phoneVerificationTokenManager, registrationLockVerificationManager,
             keys, rateLimiters),
         new RemoteConfigController(remoteConfigsManager, adminEventLogger,
             config.getRemoteConfigConfiguration().authorizedUsers(),

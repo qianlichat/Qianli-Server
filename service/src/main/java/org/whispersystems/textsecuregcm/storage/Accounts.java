@@ -108,6 +108,7 @@ public class Accounts extends AbstractDynamoDbStore {
   static final String KEY_ACCOUNT_UUID = "U";
   // uuid, attribute on account table, primary key for PNI table
   static final String ATTR_PNI_UUID = "PNI";
+  static final String ATTR_PWD = "PWD";
   // uuid of the current username link or null
   static final String ATTR_USERNAME_LINK_UUID = "UL";
   // phone number
@@ -968,6 +969,7 @@ public class Accounts extends AbstractDynamoDbStore {
 
     final Map<String, AttributeValue> item = new HashMap<>(Map.of(
         KEY_ACCOUNT_UUID, uuidAttr,
+        ATTR_PWD, AttributeValue.fromS(account.getPwd()),
         ATTR_ACCOUNT_E164, numberAttr,
         ATTR_PNI_UUID, pniUuidAttr,
         ATTR_ACCOUNT_DATA, accountDataAttributeValue(account),
@@ -1082,6 +1084,7 @@ public class Accounts extends AbstractDynamoDbStore {
     if (!item.containsKey(ATTR_ACCOUNT_DATA)
         || !item.containsKey(ATTR_ACCOUNT_E164)
         || !item.containsKey(KEY_ACCOUNT_UUID)
+        || !item.containsKey(ATTR_PWD)
         || !item.containsKey(ATTR_CANONICALLY_DISCOVERABLE)) {
       throw new RuntimeException("item missing values");
     }
@@ -1099,6 +1102,7 @@ public class Accounts extends AbstractDynamoDbStore {
       }
 
       account.setNumber(item.get(ATTR_ACCOUNT_E164).s(), phoneNumberIdentifierFromAttribute);
+      account.setPwd(item.get(ATTR_PWD).s());
       account.setUuid(accountIdentifier);
       account.setUsernameHash(AttributeValues.getByteArray(item, ATTR_USERNAME_HASH, null));
       account.setUsernameLinkHandle(AttributeValues.getUUID(item, ATTR_USERNAME_LINK_UUID, null));

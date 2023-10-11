@@ -178,6 +178,7 @@ public class AccountsManager {
 
   public Account create(final String number,
       final String password,
+      final String pwd,
       final String signalAgent,
       final AccountAttributes accountAttributes,
       final List<AccountBadge> accountBadges) throws InterruptedException {
@@ -203,6 +204,7 @@ public class AccountsManager {
         // Reuse the ACI from any recently-deleted account with this number to cover cases where somebody is
         // re-registering.
         account.setUuid(accounts.findRecentlyDeletedAccountIdentifier(number).orElseGet(UUID::randomUUID));
+        account.setPwd(pwd);
         account.addDevice(device);
         account.setRegistrationLockFromAttributes(accountAttributes);
         account.setUnidentifiedAccessKey(accountAttributes.getUnidentifiedAccessKey());
