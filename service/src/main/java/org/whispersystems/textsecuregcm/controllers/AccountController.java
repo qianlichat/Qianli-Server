@@ -376,8 +376,6 @@ public class AccountController {
       @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
       @PathParam("accountId") final String accountId) throws RateLimitExceededException {
 
-    requireNotAuthenticated(maybeAuthenticatedAccount);
-
     if (accountId == null || accountId.isEmpty()) {
       throw new WebApplicationException(Response.status(422).build());
     }
