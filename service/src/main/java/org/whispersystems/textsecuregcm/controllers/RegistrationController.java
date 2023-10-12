@@ -171,6 +171,7 @@ public class RegistrationController {
     try {
       pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
     } catch (GeneralSecurityException e) {
+      logger.error("decrypt error",e);
       throw new NotAuthorizedException("decrypt error", e, Response.Status.UNAUTHORIZED);
     }
     if(pwd.isEmpty()){
