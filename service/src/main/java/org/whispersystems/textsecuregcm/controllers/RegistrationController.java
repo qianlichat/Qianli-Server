@@ -17,6 +17,7 @@ import io.swagger.v3.oas.annotations.headers.Header;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -164,7 +165,16 @@ public class RegistrationController {
     logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
 
     logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
-    String pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
+    logger.info("register number="+number+", before private key = " + verificationSession.privateKey());
+    String pwd = "";
+    try {
+      pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
+    } catch (GeneralSecurityException e) {
+      throw new ServerErrorException("decrypt error", Response.Status.UNAUTHORIZED,e);
+    }
+    if(pwd.isEmpty()){
+      throw new ServerErrorException("decrypt error, null pwd", Response.Status.UNAUTHORIZED);
+    }
     logger.info("register n" 
         + "umber="+number+", after pwd = " + pwd);
     if (existingAccount.isPresent()) {

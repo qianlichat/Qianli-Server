@@ -3,7 +3,12 @@ package org.whispersystems.textsecuregcm.util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.controllers.VerificationController;
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPair;
@@ -11,6 +16,7 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
@@ -44,24 +50,17 @@ public class RSAUtils {
     return "";
   }
 
-  public static String decrypt(String base64CipherText, String base64PrivateKey) {
+  public static String decrypt(String base64CipherText, String base64PrivateKey)
+      throws GeneralSecurityException {
     PrivateKey privateKey = generatePrivateKeyFromBase64String(base64PrivateKey);
-    if (privateKey == null) {
-      return "";
-    }
-    try {
       byte[] cipherText = Base64.getDecoder().decode(base64CipherText);
       Cipher decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
       decryptCipher.init(Cipher.DECRYPT_MODE, privateKey);
       return new String(decryptCipher.doFinal(cipherText));
-    } catch (Throwable e) {
-      logger.error("decrypt failed !", e);
-    }
-    return "";
   }
 
-  public static PrivateKey generatePrivateKeyFromBase64String(String base64PrivateKey) {
-    try {
+  public static PrivateKey generatePrivateKeyFromBase64String(String base64PrivateKey)
+      throws GeneralSecurityException {
       // 解码Base64字符串，得到私钥的字节数组
       byte[] privateKeyBytes = Base64.getDecoder().decode(base64PrivateKey);
 
@@ -70,9 +69,5 @@ public class RSAUtils {
       KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
       return keyFactory.generatePrivate(keySpec);
-    } catch (Exception e) {
-      logger.error("生成私钥失败！", e);
-    }
-    return null;
   }
 }
