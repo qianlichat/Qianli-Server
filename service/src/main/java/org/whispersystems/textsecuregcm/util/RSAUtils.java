@@ -52,7 +52,7 @@ public class RSAUtils {
 
   public static String decrypt(String base64CipherText, String base64PrivateKey)
       throws GeneralSecurityException {
-    PrivateKey privateKey = generatePrivateKeyFromBase64String(base64PrivateKey);
+      PrivateKey privateKey = generatePrivateKeyFromBase64String(base64PrivateKey);
       byte[] cipherText = Base64.getDecoder().decode(base64CipherText);
       Cipher decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
       decryptCipher.init(Cipher.DECRYPT_MODE, privateKey);
