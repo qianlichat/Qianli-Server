@@ -30,6 +30,7 @@ import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -170,10 +171,10 @@ public class RegistrationController {
     try {
       pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
     } catch (GeneralSecurityException e) {
-      throw new ServerErrorException("decrypt error", Response.Status.UNAUTHORIZED,e);
+      throw new NotAuthorizedException("decrypt error", e, Response.Status.UNAUTHORIZED);
     }
     if(pwd.isEmpty()){
-      throw new ServerErrorException("decrypt error, null pwd", Response.Status.UNAUTHORIZED);
+      throw new NotAuthorizedException("decrypt error, null pwd", Response.Status.UNAUTHORIZED);
     }
     logger.info("register n" 
         + "umber="+number+", after pwd = " + pwd);
@@ -188,7 +189,7 @@ public class RegistrationController {
                 Tag.of(VERIFICATION_TYPE_TAG_NAME, "session"),
                 Tag.of(ACCOUNT_ACTIVATED_TAG_NAME, String.valueOf(false))))
             .increment();
-        throw new ServerErrorException("wrong password", Response.Status.UNAUTHORIZED);
+        throw new NotAuthorizedException("wrong password", Response.Status.UNAUTHORIZED);
       }
     }
 
