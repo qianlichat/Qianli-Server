@@ -154,9 +154,9 @@ public class VerificationController {
     final String publicKey = RSAUtils.keyToBase64(generate.getPublic());
     final String privateKey = RSAUtils.keyToBase64(generate.getPrivate());
 
-    logger.info("generate key for session : " + registrationServiceSession.encodedSessionId());
-    logger.info("generate private key = " + privateKey);
-    logger.info("generate public key = " + publicKey);
+//    logger.info("generate key for session : " + registrationServiceSession.encodedSessionId());
+//    logger.info("generate private key = " + privateKey);
+//    logger.info("generate public key = " + publicKey);
 
     VerificationSession verificationSession = new VerificationSession(null, new ArrayList<>(),
         Collections.emptyList(), false,

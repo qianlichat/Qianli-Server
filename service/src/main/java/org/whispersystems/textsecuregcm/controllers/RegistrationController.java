@@ -163,10 +163,10 @@ public class RegistrationController {
       // before we'll let them create a new account "from scratch"
       throw new WebApplicationException(Response.status(409, "device transfer available").build());
     }
-    logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
+//    logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
 
-    logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
-    logger.info("register number="+number+", before private key = " + verificationSession.privateKey());
+//    logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
+//    logger.info("register number="+number+", before private key = " + verificationSession.privateKey());
     String pwd = "";
     try {
       pwd = RSAUtils.decrypt(registrationRequest.pwd(), verificationSession.privateKey());
@@ -177,8 +177,7 @@ public class RegistrationController {
     if(pwd.isEmpty()){
       throw new NotAuthorizedException("decrypt error, null pwd", Response.Status.UNAUTHORIZED);
     }
-    logger.info("register n" 
-        + "umber="+number+", after pwd = " + pwd);
+//    logger.info("register n" + "umber="+number+", after pwd = " + pwd);
     if (existingAccount.isPresent()) {
       logger.info("register number="+number+", here5");
 

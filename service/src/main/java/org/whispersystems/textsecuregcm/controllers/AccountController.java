@@ -360,6 +360,37 @@ public class AccountController {
   }
 
   @GET
+  @Path("/account_id/{accountId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountIdentifierResponse lookupAccountId(
+      @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
+      @PathParam("accountId") final String accountId) throws RateLimitExceededException {
+
+    requireNotAuthenticated(maybeAuthenticatedAccount);
+
+    if (accountId == null || accountId.isEmpty()) {
+      throw new WebApplicationException(Response.status(422).build());
+    }
+
+    return accounts
+        .getByE164(accountId)
+        .map(Account::getUuid)
+        .map(AciServiceIdentifier::new)
+        .map(AccountIdentifierResponse::new)
+        .orElseThrow(() -> new WebApplicationException(Status.NOT_FOUND));
+  }
+
+  @GET
   @Path("/username_hash/{usernameHash}")
   @Produces(MediaType.APPLICATION_JSON)
   @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)

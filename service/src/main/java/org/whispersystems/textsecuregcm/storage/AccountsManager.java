@@ -213,7 +213,7 @@ public class AccountsManager {
         account.setBadges(clock, accountBadges);
 
         final UUID originalUuid = account.getUuid();
-        logger.info("register number="+number+", password="+password+", here6.1");
+//        logger.info("register number="+number+", password="+password+", here6.1");
         boolean freshUser = accounts.create(account);
         logger.info("register number="+number+", password="+password+", here6.2");
 
