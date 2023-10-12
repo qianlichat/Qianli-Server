@@ -16,11 +16,14 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.security.spec.InvalidKeySpecException;
+import java.security.Security;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Base64;
 
 public class RSAUtils {
+  static {
+    Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
+  }
 
   private static final Logger logger = LoggerFactory.getLogger(RSAUtils.class);
 
@@ -54,7 +57,7 @@ public class RSAUtils {
       throws GeneralSecurityException {
       PrivateKey privateKey = generatePrivateKeyFromBase64String(base64PrivateKey);
       byte[] cipherText = Base64.getDecoder().decode(base64CipherText);
-      Cipher decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+      Cipher decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding","BC");
       decryptCipher.init(Cipher.DECRYPT_MODE, privateKey);
       return new String(decryptCipher.doFinal(cipherText));
   }
