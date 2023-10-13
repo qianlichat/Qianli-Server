@@ -461,13 +461,16 @@ public class MessagesCache extends RedisClusterPubSubAdapter<String, String> imp
 
   @Override
   public void message(final RedisClusterNode node, final String channel, final String message) {
+    logger.info("message cmd from lua");
     pubSubMessageCounter.increment();
 
     if (channel.startsWith(QUEUE_KEYSPACE_PREFIX) && "zadd".equals(message)) {
+      logger.info("message cmd from lua, called zadd");
       newMessageNotificationCounter.increment();
       notificationExecutorService.execute(() -> {
         try {
           findListener(channel).ifPresentOrElse(listener -> {
+            logger.info("message cmd from lua, calling to handleNewMessagesAvailable");
             if (!listener.handleNewMessagesAvailable()) {
               removeMessageAvailabilityListener(listener);
             }
