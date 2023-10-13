@@ -71,9 +71,9 @@ public class BaseAccountAuthenticator {
 
     return new Pair<>(identifier, deviceId);
   }
-  private static final Logger logger = LoggerFactory.getLogger(BaseAccountAuthenticator.class);
+//  private static final Logger logger = LoggerFactory.getLogger(BaseAccountAuthenticator.class);
   public Optional<AuthenticatedAccount> authenticate(BasicCredentials basicCredentials, boolean enabledRequired) {
-    logger.info("authenticate ...");
+//    logger.info("authenticate ...");
     boolean succeeded = false;
     String failureReason = null;
 
@@ -90,7 +90,7 @@ public class BaseAccountAuthenticator {
       Optional<Account> account = accountsManager.getByAccountIdentifier(accountUuid);
 
       if (account.isEmpty()) {
-        logger.info("authenticate ... noSuchAccount");
+//        logger.info("authenticate ... noSuchAccount");
         failureReason = "noSuchAccount";
         return Optional.empty();
       }
@@ -98,7 +98,7 @@ public class BaseAccountAuthenticator {
       Optional<Device> device = account.get().getDevice(deviceId);
 
       if (device.isEmpty()) {
-        logger.info("authenticate ... noSuchDevice");
+//        logger.info("authenticate ... noSuchDevice");
         failureReason = "noSuchDevice";
         return Optional.empty();
       }
@@ -107,13 +107,13 @@ public class BaseAccountAuthenticator {
         final boolean deviceDisabled = !device.get().isEnabled();
         if (deviceDisabled) {
           failureReason = "deviceDisabled";
-          logger.info("authenticate ... deviceDisabled");
+//          logger.info("authenticate ... deviceDisabled");
         }
 
         final boolean accountDisabled = !account.get().isEnabled();
         if (accountDisabled) {
           failureReason = "accountDisabled";
-          logger.info("authenticate ... accountDisabled");
+//          logger.info("authenticate ... accountDisabled");
         }
         if (accountDisabled || deviceDisabled) {
           return Optional.empty();
@@ -142,7 +142,7 @@ public class BaseAccountAuthenticator {
       return Optional.empty();
     } catch (IllegalArgumentException | InvalidAuthorizationHeaderException iae) {
       failureReason = "invalidHeader";
-      logger.info("authenticate ... failureReason");
+//      logger.info("authenticate ... failureReason");
       return Optional.empty();
     } finally {
       Tags tags = Tags.of(
