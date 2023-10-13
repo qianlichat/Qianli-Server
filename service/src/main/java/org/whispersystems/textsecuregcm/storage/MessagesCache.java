@@ -160,12 +160,21 @@ public class MessagesCache extends RedisClusterPubSubAdapter<String, String> imp
     final MessageProtos.Envelope messageWithGuid = message.toBuilder().setServerGuid(guid.toString()).build();
     //noinspection DataFlowIssue
     return (long) insertTimer.record(() ->
-        insertScript.executeBinary(List.of(getMessageQueueKey(destinationUuid, destinationDevice),
-                getMessageQueueMetadataKey(destinationUuid, destinationDevice),
-                getQueueIndexKey(destinationUuid, destinationDevice)),
-            List.of(messageWithGuid.toByteArray(),
-                String.valueOf(message.getServerTimestamp()).getBytes(StandardCharsets.UTF_8),
-                guid.toString().getBytes(StandardCharsets.UTF_8))));
+    {
+      final byte[] messageQueueKey = getMessageQueueKey(destinationUuid, destinationDevice);
+      final byte[] messageQueueMetadataKey = getMessageQueueMetadataKey(destinationUuid, destinationDevice);
+      final byte[] queueIndexKey = getQueueIndexKey(destinationUuid, destinationDevice);
+      logger.info("insert message, queueKey=" + new String(messageQueueKey));
+      logger.info("insert message, queueMetadataKey=" + new String(messageQueueMetadataKey));
+      logger.info("insert message, queueIndexKey=" + new String(queueIndexKey));
+      logger.info("insert message, guid=" + guid);
+      return insertScript.executeBinary(List.of(messageQueueKey,
+              messageQueueMetadataKey,
+              queueIndexKey),
+          List.of(messageWithGuid.toByteArray(),
+              String.valueOf(message.getServerTimestamp()).getBytes(StandardCharsets.UTF_8),
+              guid.toString().getBytes(StandardCharsets.UTF_8)));
+    });
   }
 
   public CompletableFuture<Optional<MessageProtos.Envelope>> remove(final UUID destinationUuid,
