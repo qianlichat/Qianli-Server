@@ -163,8 +163,8 @@ public class ClientPresenceManager extends RedisClusterPubSubAdapter<String, Str
   }
 
   public void setPresent(final UUID accountUuid, final long deviceId, final DisplacedPresenceListener displacementListener) {
-
     try (final Timer.Context ignored = setPresenceTimer.time()) {
+      log.info("setPresent for :" + accountUuid);
       final String presenceKey = getPresenceKey(accountUuid, deviceId);
 
       displacePresence(presenceKey, true);
@@ -179,6 +179,7 @@ public class ClientPresenceManager extends RedisClusterPubSubAdapter<String, Str
       });
 
       subscribeForRemotePresenceChanges(presenceKey);
+      log.info("setPresent for :" + accountUuid +", done!");
     }
   }
 
