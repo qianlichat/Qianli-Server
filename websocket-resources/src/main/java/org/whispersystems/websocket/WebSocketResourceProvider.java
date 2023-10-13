@@ -142,7 +142,7 @@ public class WebSocketResourceProvider<T extends Principal> implements WebSocket
 
   @Override
   public void onWebSocketClose(int statusCode, String reason) {
-    logger.info("onWebSocketClose");
+    logger.info("onWebSocketClose : code = " + statusCode + ", reason" + reason);
     if (context != null) {
       context.notifyClosed(statusCode, reason);
 
