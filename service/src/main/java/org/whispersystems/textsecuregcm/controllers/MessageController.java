@@ -689,7 +689,7 @@ public class MessageController {
         logger.warn("Received bad envelope type {} from {}", incomingMessage.type(), userAgentString);
         throw new BadRequestException(e);
       }
-      logger.info("sendMessage to " + destinationDevice.getId()+", online = " + online);
+//      logger.info("sendMessage to " + destinationDevice.getId()+", online = " + online);
       messageSender.sendMessage(destinationAccount, destinationDevice, envelope, online);
     } catch (NotPushRegisteredException e) {
       if (destinationDevice.isMaster()) throw new NoSuchUserException(e);
