@@ -64,7 +64,7 @@ public class WebSocketResourceProviderFactory<T extends Principal> extends WebSo
           authenticated = authenticationResult.getUser().orElse(null);
         }
       }
-
+      logger.warn("createWebSocket ..");
       return new WebSocketResourceProvider<>(getRemoteAddress(request),
           this.jerseyApplicationHandler,
           this.environment.getRequestLog(),

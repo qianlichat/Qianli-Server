@@ -17,12 +17,15 @@ import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.RefreshingAccountAndDeviceSupplier;
 import org.whispersystems.textsecuregcm.util.Pair;
 import org.whispersystems.textsecuregcm.util.Util;
+import org.whispersystems.textsecuregcm.websocket.AuthenticatedConnectListener;
 
 public class BaseAccountAuthenticator {
 
@@ -68,8 +71,9 @@ public class BaseAccountAuthenticator {
 
     return new Pair<>(identifier, deviceId);
   }
-
+  private static final Logger logger = LoggerFactory.getLogger(BaseAccountAuthenticator.class);
   public Optional<AuthenticatedAccount> authenticate(BasicCredentials basicCredentials, boolean enabledRequired) {
+    logger.info("authenticate ...");
     boolean succeeded = false;
     String failureReason = null;
 
@@ -86,6 +90,7 @@ public class BaseAccountAuthenticator {
       Optional<Account> account = accountsManager.getByAccountIdentifier(accountUuid);
 
       if (account.isEmpty()) {
+        logger.info("authenticate ... noSuchAccount");
         failureReason = "noSuchAccount";
         return Optional.empty();
       }
@@ -93,6 +98,7 @@ public class BaseAccountAuthenticator {
       Optional<Device> device = account.get().getDevice(deviceId);
 
       if (device.isEmpty()) {
+        logger.info("authenticate ... noSuchDevice");
         failureReason = "noSuchDevice";
         return Optional.empty();
       }
@@ -101,11 +107,13 @@ public class BaseAccountAuthenticator {
         final boolean deviceDisabled = !device.get().isEnabled();
         if (deviceDisabled) {
           failureReason = "deviceDisabled";
+          logger.info("authenticate ... deviceDisabled");
         }
 
         final boolean accountDisabled = !account.get().isEnabled();
         if (accountDisabled) {
           failureReason = "accountDisabled";
+          logger.info("authenticate ... accountDisabled");
         }
         if (accountDisabled || deviceDisabled) {
           return Optional.empty();
@@ -134,6 +142,7 @@ public class BaseAccountAuthenticator {
       return Optional.empty();
     } catch (IllegalArgumentException | InvalidAuthorizationHeaderException iae) {
       failureReason = "invalidHeader";
+      logger.info("authenticate ... failureReason");
       return Optional.empty();
     } finally {
       Tags tags = Tags.of(
