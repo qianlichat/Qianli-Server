@@ -530,6 +530,8 @@ public class MessageController {
       @HeaderParam(Stories.X_SIGNAL_RECEIVE_STORIES) String receiveStoriesHeader,
       @HeaderParam(HttpHeaders.USER_AGENT) String userAgent) {
 
+    logger.info("getPendingMessages : " + auth.getAccount().getUuid());
+
     boolean shouldReceiveStories = Stories.parseReceiveStoriesHeader(receiveStoriesHeader);
 
     pushNotificationManager.handleMessagesRetrieved(auth.getAccount(), auth.getAuthenticatedDevice(), userAgent);
@@ -687,7 +689,7 @@ public class MessageController {
         logger.warn("Received bad envelope type {} from {}", incomingMessage.type(), userAgentString);
         throw new BadRequestException(e);
       }
-
+      logger.info("sendMessage to " + destinationDevice.getId()+", online = " + online);
       messageSender.sendMessage(destinationAccount, destinationDevice, envelope, online);
     } catch (NotPushRegisteredException e) {
       if (destinationDevice.isMaster()) throw new NoSuchUserException(e);
