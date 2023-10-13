@@ -9,6 +9,9 @@ import static org.whispersystems.textsecuregcm.entities.MessageProtos.Envelope;
 
 import io.micrometer.core.instrument.Metrics;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.whispersystems.textsecuregcm.controllers.MessageController;
 import org.whispersystems.textsecuregcm.redis.RedisOperation;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.Device;
@@ -42,6 +45,7 @@ public class MessageSender {
   private static final String STORY_TAG_NAME = "story";
   private static final String SEALED_SENDER_TAG_NAME = "sealedSender";
   private static final String HAS_SPAM_REPORTING_TOKEN_TAG_NAME = "hasSpamReportingToken";
+  private static final Logger logger = LoggerFactory.getLogger(MessageSender.class);
 
   public MessageSender(ClientPresenceManager clientPresenceManager,
       MessagesManager messagesManager,
@@ -68,13 +72,19 @@ public class MessageSender {
       throw new AssertionError();
     }
 
+    logger.info("send message through : " + channel + ", online = " + online);
+
     final boolean clientPresent;
 
     if (online) {
       clientPresent = clientPresenceManager.isPresent(account.getUuid(), device.getId());
 
       if (clientPresent) {
+        logger.info("send message insert : " + channel + ", online = " + online);
         messagesManager.insert(account.getUuid(), device.getId(), message.toBuilder().setEphemeral(true).build());
+        logger.info("send message inserted : " + channel + ", online = " + online);
+      }else{
+        logger.info("send message insert  fake online : " + channel + ", online = " + online);
       }
     } else {
       messagesManager.insert(account.getUuid(), device.getId(), message);
