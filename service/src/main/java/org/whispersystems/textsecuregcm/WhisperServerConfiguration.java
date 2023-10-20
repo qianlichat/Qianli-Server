@@ -33,6 +33,7 @@ import org.whispersystems.textsecuregcm.configuration.DynamoDbTables;
 import org.whispersystems.textsecuregcm.configuration.FcmConfiguration;
 import org.whispersystems.textsecuregcm.configuration.GcpAttachmentsConfiguration;
 import org.whispersystems.textsecuregcm.configuration.GenericZkConfig;
+import org.whispersystems.textsecuregcm.configuration.GroupConfiguration;
 import org.whispersystems.textsecuregcm.configuration.HCaptchaConfiguration;
 import org.whispersystems.textsecuregcm.configuration.LinkDeviceSecretConfiguration;
 import org.whispersystems.textsecuregcm.configuration.MaxDeviceConfiguration;
@@ -181,6 +182,11 @@ public class WhisperServerConfiguration extends Configuration {
   @NotNull
   @JsonProperty
   private FcmConfiguration fcm;
+
+  @JsonProperty
+  @Valid
+  @NotNull
+  private GroupConfiguration group;
 
   @Valid
   @NotNull
@@ -406,6 +412,8 @@ public class WhisperServerConfiguration extends Configuration {
   public FcmConfiguration getFcmConfiguration() {
     return fcm;
   }
+
+  public GroupConfiguration getGroup(){return group;}
 
   public ApnConfiguration getApnConfiguration() {
     return apn;

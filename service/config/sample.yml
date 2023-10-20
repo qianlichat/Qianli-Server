@@ -95,6 +95,10 @@ dynamoDbTables:
     tableName: Example_Subscriptions
   verificationSessions:
     tableName: Example_VerificationSessions
+  groups:
+    tableName: Example_GroupsTable
+  groupLogs:
+    tableName: Example_GroupLogTable
 
 cacheCluster: # Redis server configuration for cache cluster
   configurationUri: redis://redis.example.com:6379/
@@ -131,6 +135,13 @@ gcpAttachments: # GCP Storage configuration
   maxSizeInBytes: 1024
   pathPrefix:
   rsaSigningKey: secret://gcpAttachments.rsaSigningKey
+
+group:
+  maxGroupSize: 1000
+  maxGroupTitleLengthBytes: 40
+  maxGroupDescriptionLengthBytes: 32000
+  externalServiceSecret: Q9TAc6M3Q9A=
+
 
 tus:
   uploadUri: https://example.org/upload

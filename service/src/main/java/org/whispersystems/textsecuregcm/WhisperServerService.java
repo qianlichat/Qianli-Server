@@ -60,6 +60,9 @@ import org.signal.libsignal.zkgroup.auth.ServerZkAuthOperations;
 import org.signal.libsignal.zkgroup.profiles.ServerZkProfileOperations;
 import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
 import org.signal.libsignal.zkgroup.receipts.ServerZkReceiptOperations;
+import org.signal.storageservice.auth.ExternalGroupCredentialGenerator;
+import org.signal.storageservice.controllers.GroupsController;
+import org.signal.storageservice.storage.GroupsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.attachments.GcsAttachmentGenerator;
@@ -467,7 +470,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
 //        config.getArtServiceConfiguration());
 //    ExternalServiceCredentialsGenerator svr2CredentialsGenerator = SecureValueRecovery2Controller.credentialsGenerator(
 //        config.getSvr2Configuration());
-
+    GroupsManager groupsManager = new GroupsManager(dynamoDbClient,dynamoDbAsyncClient,config.getDynamoDbTables().getGroupsTable().getTableName(),config.getDynamoDbTables().getGroupLogsTable().getTableName());
     dynamicConfigurationManager.start();
 
     ExperimentEnrollmentManager experimentEnrollmentManager = new ExperimentEnrollmentManager(
@@ -697,6 +700,9 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         new AccountController(accountsManager, rateLimiters,
             turnTokenGenerator,
             registrationRecoveryPasswordsManager, usernameHashZkProofVerifier));
+    ExternalGroupCredentialGenerator externalGroupCredentialGenerator = new ExternalGroupCredentialGenerator(
+        config.getGroup().getExternalServiceSecret(), Clock.systemUTC());
+    environment.jersey().register(new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator));
 
     environment.jersey().register(new KeysController(rateLimiters, keys, accountsManager));
 
