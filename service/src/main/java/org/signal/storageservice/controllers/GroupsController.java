@@ -8,6 +8,7 @@ package org.signal.storageservice.controllers;
 import com.codahale.metrics.annotation.Timed;
 import com.google.protobuf.ByteString;
 import io.dropwizard.auth.Auth;
+import io.dropwizard.auth.basic.BasicCredentials;
 import io.dropwizard.util.Strings;
 import io.micrometer.core.instrument.DistributionSummary;
 import io.micrometer.core.instrument.Metrics;
@@ -17,9 +18,11 @@ import org.apache.http.HttpHeaders;
 import org.apache.http.HttpStatus;
 import org.signal.libsignal.zkgroup.NotarySignature;
 import org.signal.libsignal.zkgroup.ServerSecretParams;
+import org.signal.libsignal.zkgroup.auth.ServerZkAuthOperations;
 import org.signal.libsignal.zkgroup.profiles.ServerZkProfileOperations;
 import org.signal.storageservice.auth.ExternalGroupCredentialGenerator;
 import org.signal.storageservice.auth.GroupUser;
+import org.signal.storageservice.auth.GroupUserAuthenticator;
 import org.signal.storageservice.groups.GroupAuth;
 import org.signal.storageservice.groups.GroupChangeApplicator;
 import org.signal.storageservice.groups.GroupValidator;
@@ -29,6 +32,7 @@ import org.signal.storageservice.storage.GroupsManager;
 import org.signal.storageservice.storage.protos.groups.*;
 import org.signal.storageservice.storage.protos.groups.GroupChange.Actions;
 import org.signal.storageservice.util.CollectionUtil;
+import org.whispersystems.textsecuregcm.auth.BasicAuthorizationHeader;
 import org.whispersystems.textsecuregcm.configuration.GroupConfiguration;
 import org.whispersystems.textsecuregcm.metrics.UserAgentTagUtil;
 import org.whispersystems.textsecuregcm.s3.PolicySigner;
@@ -73,6 +77,7 @@ public class GroupsController {
   private final PostPolicyGenerator policyGenerator;
 
   private final ExternalGroupCredentialGenerator externalGroupCredentialGenerator;
+  private final GroupUserAuthenticator authenticator;
 
   public GroupsController(
       Clock clock,
@@ -81,7 +86,8 @@ public class GroupsController {
       PolicySigner policySigner,
       PostPolicyGenerator policyGenerator,
       GroupConfiguration groupConfiguration,
-      ExternalGroupCredentialGenerator externalGroupCredentialGenerator) {
+      ExternalGroupCredentialGenerator externalGroupCredentialGenerator,
+      ServerZkAuthOperations zkAuthOperations) {
     this.clock = clock;
     this.groupsManager = groupsManager;
     this.serverSecretParams = serverSecretParams;
@@ -90,6 +96,7 @@ public class GroupsController {
     this.policySigner = policySigner;
     this.policyGenerator = policyGenerator;
     this.externalGroupCredentialGenerator = externalGroupCredentialGenerator;
+    this.authenticator = new GroupUserAuthenticator(zkAuthOperations);
   }
 
   @Timed
@@ -279,7 +286,15 @@ public class GroupsController {
   @PUT
   @Produces(ProtocolBufferMediaType.APPLICATION_PROTOBUF)
   @Consumes(ProtocolBufferMediaType.APPLICATION_PROTOBUF)
-  public CompletableFuture<Response> createGroup(@Auth GroupUser user, @NoUnknownFields Group group) {
+  public CompletableFuture<Response> createGroup(
+      @HeaderParam(HttpHeaders.AUTHORIZATION) BasicAuthorizationHeader authorizationHeader,
+      @NoUnknownFields Group group) {
+    final Optional<GroupUser> authenticate = authenticator.authenticate(
+        new BasicCredentials(authorizationHeader.getUsername(), authorizationHeader.getPassword()));
+    if(authenticate.isEmpty()){
+      throw new BadRequestException("can not construct GroupUser");
+    }
+    GroupUser user = authenticate.get();
     if (group.getVersion() != 0)                                        return CompletableFuture.completedFuture(Response.status(Response.Status.BAD_REQUEST).build());
     if (group.getPublicKey() == null || group.getPublicKey().isEmpty()) return CompletableFuture.completedFuture(Response.status(Response.Status.BAD_REQUEST).build());
     if (group.getTitle() == null || group.getTitle().isEmpty())         return CompletableFuture.completedFuture(Response.status(Response.Status.BAD_REQUEST).build());
