@@ -62,6 +62,8 @@ import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
 import org.signal.libsignal.zkgroup.receipts.ServerZkReceiptOperations;
 import org.signal.storageservice.auth.ExternalGroupCredentialGenerator;
 import org.signal.storageservice.controllers.GroupsController;
+import org.signal.storageservice.providers.ProtocolBufferMessageBodyProvider;
+import org.signal.storageservice.providers.ProtocolBufferValidationErrorMessageBodyWriter;
 import org.signal.storageservice.storage.GroupsManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -671,6 +673,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.lifecycle().manage(new GrpcServerManagedWrapper(grpcServer.build()));
 
     environment.jersey().register(new RequestStatisticsFilter(TrafficSource.HTTP));
+    environment.jersey().register(ProtocolBufferMessageBodyProvider.class);
+    environment.jersey().register(ProtocolBufferValidationErrorMessageBodyWriter.class);
     environment.jersey().register(MultiRecipientMessageProvider.class);
     environment.jersey().register(new MetricsApplicationEventListener(TrafficSource.HTTP, clientReleaseManager));
     environment.jersey()
