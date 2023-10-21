@@ -792,7 +792,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         new VerificationController(registrationServiceClient, new VerificationSessionManager(verificationSessions),
             pushNotificationManager, registrationCaptchaManager, registrationRecoveryPasswordsManager, rateLimiters,
             accountsManager, clock),
-        new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator)
+        new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator,zkAuthOperations)
     );
 //    if (config.getSubscription() != null && config.getOneTimeDonations() != null) {
 //      commonControllers.add(new SubscriptionController(clock, config.getSubscription(), config.getOneTimeDonations(),
