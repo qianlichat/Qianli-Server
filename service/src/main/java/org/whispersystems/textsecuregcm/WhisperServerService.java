@@ -61,6 +61,9 @@ import org.signal.libsignal.zkgroup.profiles.ServerZkProfileOperations;
 import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
 import org.signal.libsignal.zkgroup.receipts.ServerZkReceiptOperations;
 import org.signal.storageservice.auth.ExternalGroupCredentialGenerator;
+import org.signal.storageservice.auth.GroupUser;
+import org.signal.storageservice.auth.GroupUserAuthenticator;
+import org.signal.storageservice.auth.User;
 import org.signal.storageservice.controllers.GroupsController;
 import org.signal.storageservice.storage.GroupsManager;
 import org.slf4j.Logger;
@@ -639,6 +642,9 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     AuthFilter<BasicCredentials, DisabledPermittedAuthenticatedAccount> disabledPermittedAccountAuthFilter = new BasicCredentialAuthFilter.Builder<DisabledPermittedAuthenticatedAccount>().setAuthenticator(
         disabledPermittedAccountAuthenticator).buildAuthFilter();
 
+    GroupUserAuthenticator groupUserAuthenticator = new GroupUserAuthenticator(new ServerZkAuthOperations(zkSecretParams));
+    AuthFilter<BasicCredentials, GroupUser> groupUserAuthFilter = new BasicCredentialAuthFilter.Builder<GroupUser>().setAuthenticator(groupUserAuthenticator).buildAuthFilter();
+
     final BasicCredentialAuthenticationInterceptor basicCredentialAuthenticationInterceptor =
         new BasicCredentialAuthenticationInterceptor(new BaseAccountAuthenticator(accountsManager));
 
@@ -673,6 +679,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.jersey().register(new RequestStatisticsFilter(TrafficSource.HTTP));
     environment.jersey().register(MultiRecipientMessageProvider.class);
     environment.jersey().register(new MetricsApplicationEventListener(TrafficSource.HTTP, clientReleaseManager));
+//    environment.jersey().register(new PolymorphicAuthDynamicFeature<>(ImmutableMap.of(User.class, userAuthFilter, GroupUser.class, groupUserAuthFilter)));
+    environment.jersey().register(new PolymorphicAuthValueFactoryProvider.Binder<>(ImmutableSet.of(User.class, GroupUser.class)));
     environment.jersey()
         .register(new PolymorphicAuthDynamicFeature<>(ImmutableMap.of(AuthenticatedAccount.class, accountAuthFilter,
             DisabledPermittedAuthenticatedAccount.class, disabledPermittedAccountAuthFilter)));
@@ -702,7 +710,6 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
             registrationRecoveryPasswordsManager, usernameHashZkProofVerifier));
     ExternalGroupCredentialGenerator externalGroupCredentialGenerator = new ExternalGroupCredentialGenerator(
         config.getGroup().getExternalServiceSecret(), Clock.systemUTC());
-    environment.jersey().register(new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator));
 
     environment.jersey().register(new KeysController(rateLimiters, keys, accountsManager));
 
@@ -792,7 +799,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
             config.getCdnConfiguration().bucket()),
         new VerificationController(registrationServiceClient, new VerificationSessionManager(verificationSessions),
             pushNotificationManager, registrationCaptchaManager, registrationRecoveryPasswordsManager, rateLimiters,
-            accountsManager, clock)
+            accountsManager, clock),
+        new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator)
     );
 //    if (config.getSubscription() != null && config.getOneTimeDonations() != null) {
 //      commonControllers.add(new SubscriptionController(clock, config.getSubscription(), config.getOneTimeDonations(),
