@@ -61,9 +61,11 @@ import org.signal.libsignal.zkgroup.profiles.ServerZkProfileOperations;
 import org.signal.libsignal.zkgroup.receipts.ReceiptCredentialPresentation;
 import org.signal.libsignal.zkgroup.receipts.ServerZkReceiptOperations;
 import org.signal.storageservice.auth.ExternalGroupCredentialGenerator;
+import org.signal.storageservice.auth.ExternalServiceCredentialValidator;
 import org.signal.storageservice.auth.GroupUser;
 import org.signal.storageservice.auth.GroupUserAuthenticator;
 import org.signal.storageservice.auth.User;
+import org.signal.storageservice.auth.UserAuthenticator;
 import org.signal.storageservice.controllers.GroupsController;
 import org.signal.storageservice.storage.GroupsManager;
 import org.slf4j.Logger;
@@ -679,8 +681,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     environment.jersey().register(new RequestStatisticsFilter(TrafficSource.HTTP));
     environment.jersey().register(MultiRecipientMessageProvider.class);
     environment.jersey().register(new MetricsApplicationEventListener(TrafficSource.HTTP, clientReleaseManager));
-//    environment.jersey().register(new PolymorphicAuthDynamicFeature<>(ImmutableMap.of(User.class, userAuthFilter, GroupUser.class, groupUserAuthFilter)));
-    environment.jersey().register(new PolymorphicAuthValueFactoryProvider.Binder<>(ImmutableSet.of(User.class, GroupUser.class)));
+    environment.jersey().register(new PolymorphicAuthDynamicFeature<>(ImmutableMap.of(GroupUser.class, groupUserAuthFilter)));
+    environment.jersey().register(new PolymorphicAuthValueFactoryProvider.Binder<>(ImmutableSet.of(GroupUser.class)));
     environment.jersey()
         .register(new PolymorphicAuthDynamicFeature<>(ImmutableMap.of(AuthenticatedAccount.class, accountAuthFilter,
             DisabledPermittedAuthenticatedAccount.class, disabledPermittedAccountAuthFilter)));
