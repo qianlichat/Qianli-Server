@@ -370,6 +370,7 @@ public class GroupValidator {
     }
 
     if (group.getTitle().size() > maxGroupTitleLengthBytes) {
+      logger.error("group title length exceeded: " + group.getTitle().toString() + ", length=" + group.getTitle().size() + ", maxGroupTitleLengthBytes=" + maxGroupTitleLengthBytes);
       throw new BadRequestException("group title length exceeded");
     }
 
