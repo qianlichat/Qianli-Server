@@ -164,10 +164,10 @@ public class MessagesCache extends RedisClusterPubSubAdapter<String, String> imp
       final byte[] messageQueueKey = getMessageQueueKey(destinationUuid, destinationDevice);
       final byte[] messageQueueMetadataKey = getMessageQueueMetadataKey(destinationUuid, destinationDevice);
       final byte[] queueIndexKey = getQueueIndexKey(destinationUuid, destinationDevice);
-      logger.info("insert message, queueKey=" + new String(messageQueueKey));
-      logger.info("insert message, queueMetadataKey=" + new String(messageQueueMetadataKey));
-      logger.info("insert message, queueIndexKey=" + new String(queueIndexKey));
-      logger.info("insert message, guid=" + guid);
+//      logger.info("insert message, queueKey=" + new String(messageQueueKey));
+//      logger.info("insert message, queueMetadataKey=" + new String(messageQueueMetadataKey));
+//      logger.info("insert message, queueIndexKey=" + new String(queueIndexKey));
+//      logger.info("insert message, guid=" + guid);
       return insertScript.executeBinary(List.of(messageQueueKey,
               messageQueueMetadataKey,
               queueIndexKey),
@@ -470,16 +470,16 @@ public class MessagesCache extends RedisClusterPubSubAdapter<String, String> imp
 
   @Override
   public void message(final RedisClusterNode node, final String channel, final String message) {
-    logger.info("message cmd from lua");
+//    logger.info("message cmd from lua");
     pubSubMessageCounter.increment();
 
     if (channel.startsWith(QUEUE_KEYSPACE_PREFIX) && "zadd".equals(message)) {
-      logger.info("message cmd from lua, called zadd");
+//      logger.info("message cmd from lua, called zadd");
       newMessageNotificationCounter.increment();
       notificationExecutorService.execute(() -> {
         try {
           findListener(channel).ifPresentOrElse(listener -> {
-            logger.info("message cmd from lua, calling to handleNewMessagesAvailable");
+//            logger.info("message cmd from lua, calling to handleNewMessagesAvailable");
             if (!listener.handleNewMessagesAvailable()) {
               removeMessageAvailabilityListener(listener);
             }

@@ -377,7 +377,7 @@ public class MessageController {
       @QueryParam("urgent") @DefaultValue("true") final boolean isUrgent,
       @QueryParam("story") boolean isStory,
       @NotNull @Valid MultiRecipientMessage multiRecipientMessage) {
-    logger.info("send to multi_recipient");
+//    logger.info("send to multi_recipient");
     final Map<ServiceIdentifier, Account> accountsByServiceIdentifier = new HashMap<>();
 
     for (final Recipient recipient : multiRecipientMessage.recipients()) {
@@ -530,7 +530,7 @@ public class MessageController {
       @HeaderParam(Stories.X_SIGNAL_RECEIVE_STORIES) String receiveStoriesHeader,
       @HeaderParam(HttpHeaders.USER_AGENT) String userAgent) {
 
-    logger.info("getPendingMessages : " + auth.getAccount().getUuid());
+//    logger.info("getPendingMessages : " + auth.getAccount().getUuid());
 
     boolean shouldReceiveStories = Stories.parseReceiveStoriesHeader(receiveStoriesHeader);
 
@@ -706,7 +706,7 @@ public class MessageController {
       Recipient recipient,
       byte[] commonPayload) throws NoSuchUserException {
     try {
-      logger.info("sendCommonPayloadMessage to " + destinationAccount.getUuid());
+//      logger.info("sendCommonPayloadMessage to " + destinationAccount.getUuid());
       Envelope.Builder messageBuilder = Envelope.newBuilder();
       long serverTimestamp = System.currentTimeMillis();
       byte[] recipientKeyMaterial = recipient.perRecipientKeyMaterial();
