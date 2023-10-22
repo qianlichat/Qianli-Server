@@ -203,7 +203,7 @@ public class WebSocketConnection implements MessageAvailabilityListener, Displac
   }
 
   private CompletableFuture<Void> sendMessage(final Envelope message, StoredMessageInfo storedMessageInfo) {
-//    logger.info("sendMessage to " + auth.getAccount().getUuid());
+    logger.info("sendMessage to " + auth.getAccount().getUuid());
     // clear ephemeral field from the envelope
     final Optional<byte[]> body = Optional.ofNullable(message.toBuilder().clearEphemeral().build().toByteArray());
 
@@ -211,22 +211,22 @@ public class WebSocketConnection implements MessageAvailabilityListener, Displac
     sentMessageCounter.increment();
     bytesSentMeter.mark(body.map(bytes -> bytes.length).orElse(0));
     MessageMetrics.measureAccountEnvelopeUuidMismatches(auth.getAccount(), message);
-//    logger.info("sendMessage to " + auth.getAccount().getUuid() + " processed");
+    logger.info("sendMessage to " + auth.getAccount().getUuid() + " processed");
     // X-Signal-Key: false must be sent until Android stops assuming it missing means true
     return client.sendRequest("PUT", "/api/v1/message",
             List.of(HeaderUtils.X_SIGNAL_KEY + ": false", HeaderUtils.getTimestampHeader()), body)
         .whenComplete((ignored, throwable) -> {
           if (throwable != null) {
-//            logger.error("sendMessage to " + auth.getAccount().getUuid() + " done but failed",throwable);
+            logger.error("sendMessage to " + auth.getAccount().getUuid() + " done but failed",throwable);
             sendFailuresMeter.mark();
           } else {
-//            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done !!");
+            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done !!");
             MessageMetrics.measureOutgoingMessageLatency(message.getServerTimestamp(), "websocket", client.getUserAgent(), clientReleaseManager);
           }
         }).thenCompose(response -> {
           final CompletableFuture<Void> result;
           if (isSuccessResponse(response)) {
-//            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done with successResponse");
+            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done with successResponse");
 
             result = messagesManager.delete(auth.getAccount().getUuid(), device.getId(),
                     storedMessageInfo.guid(), storedMessageInfo.serverTimestamp())
@@ -237,7 +237,7 @@ public class WebSocketConnection implements MessageAvailabilityListener, Displac
               sendDeliveryReceiptFor(message);
             }
           } else {
-//            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done without successResponse");
+            logger.info("sendMessage to " + auth.getAccount().getUuid() + " done without successResponse");
               final List<Tag> tags = new ArrayList<>(
                   List.of(
                       Tag.of(STATUS_CODE_TAG, String.valueOf(response.getStatus())),
@@ -424,7 +424,7 @@ public class WebSocketConnection implements MessageAvailabilityListener, Displac
 
   @Override
   public boolean handleNewMessagesAvailable() {
-//    logger.info("handleNewMessagesAvailable for :" + auth.getAccount().getUuid());
+    logger.info("handleNewMessagesAvailable for :" + auth.getAccount().getUuid());
     if (!client.isOpen()) {
       // The client may become closed without successful removal of references to the `MessageAvailabilityListener`
       Metrics.counter(CLIENT_CLOSED_MESSAGE_AVAILABLE_COUNTER_NAME).increment();
