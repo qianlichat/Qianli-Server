@@ -5,15 +5,19 @@
 
 package org.whispersystems.textsecuregcm.storage;
 
+import io.lettuce.core.RedisException;
 import io.micrometer.core.instrument.Metrics;
 import io.micrometer.core.instrument.Timer;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.entities.SignedPreKey;
 import org.whispersystems.textsecuregcm.metrics.MetricsUtil;
 import org.whispersystems.textsecuregcm.util.AttributeValues;
+import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
@@ -25,6 +29,7 @@ import software.amazon.awssdk.services.dynamodb.model.PutItemRequest;
 import software.amazon.awssdk.services.dynamodb.model.QueryRequest;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItem;
 import software.amazon.awssdk.services.dynamodb.model.TransactWriteItemsRequest;
+import software.amazon.awssdk.services.dynamodb.model.TransactionCanceledException;
 
 /**
  * A repeated-use signed pre-key store manages storage for pre-keys that may be used more than once. Generally, these
@@ -77,6 +82,8 @@ public abstract class RepeatedUseSignedPreKeyStore<K extends SignedPreKey<?>> {
         .thenRun(() -> sample.stop(storeSingleKeyTimer));
   }
 
+  private static final Logger logger = LoggerFactory.getLogger(RepeatedUseSignedPreKeyStore.class);
+
   /**
    * Stores repeated-use pre-keys for a collection of devices associated with a single account/identity, displacing any
    * previously-stored repeated-use pre-keys for the targeted devices. Note that this method is transactional; either
@@ -96,15 +103,33 @@ public abstract class RepeatedUseSignedPreKeyStore<K extends SignedPreKey<?>> {
                   final long deviceId = entry.getKey();
                   final K signedPreKey = entry.getValue();
 
+                  logger.info("going to store, table name = " + tableName);
+
+                  final Map<String, AttributeValue> itemFromPreKey = getItemFromPreKey(identifier, deviceId,
+                      signedPreKey);
+                  logger.info("going to store, item = " + itemFromPreKey.toString());
                   return TransactWriteItem.builder()
                       .put(Put.builder()
                           .tableName(tableName)
-                          .item(getItemFromPreKey(identifier, deviceId, signedPreKey))
+                          .item(itemFromPreKey)
                           .build())
                       .build();
                 })
                 .toList())
         .build())
+        .exceptionally(throwable -> {
+          logger.error("error to store in "+tableName);
+          if(throwable.getCause() instanceof TransactionCanceledException tt){
+            logger.error("error to  awsErrorDetails : "+tt.awsErrorDetails());
+            logger.error("error to  message  : "+tt.getMessage());
+            if (tt.hasCancellationReasons()) {
+              tt.cancellationReasons().forEach(cancellationReason -> {
+                logger.error("error canceled bcos: "+cancellationReason.toString());
+              });
+            }
+          }
+          throw ExceptionUtils.wrap(throwable);
+        })
         .thenRun(() -> sample.stop(storeKeyBatchTimer));
   }
 

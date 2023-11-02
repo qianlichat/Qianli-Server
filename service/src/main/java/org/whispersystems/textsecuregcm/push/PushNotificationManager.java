@@ -50,7 +50,7 @@ public class PushNotificationManager {
   public void sendNewMessageNotification(final Account destination, final long destinationDeviceId, final boolean urgent) throws NotPushRegisteredException {
     final Device device = destination.getDevice(destinationDeviceId).orElseThrow(NotPushRegisteredException::new);
     final Pair<String, PushNotification.TokenType> tokenAndType = getToken(device);
-
+    logger.info("sendNewMessageNotification :" + destination.getUuid());
     sendNotification(new PushNotification(tokenAndType.first(), tokenAndType.second(),
         PushNotification.NotificationType.NOTIFICATION, null, destination, device, urgent));
   }
@@ -153,7 +153,7 @@ public class PushNotificationManager {
                 .whenComplete(logErrors());
           }
         } else {
-          logger.debug("Failed to deliver {} push notification to {} ({})",
+          logger.info("Failed to deliver {} push notification to {} ({})",
               pushNotification.notificationType(), pushNotification.deviceToken(), pushNotification.tokenType(),
               throwable);
 

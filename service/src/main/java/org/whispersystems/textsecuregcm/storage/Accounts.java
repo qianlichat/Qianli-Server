@@ -34,6 +34,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.whispersystems.textsecuregcm.controllers.RegistrationController;
 import org.whispersystems.textsecuregcm.util.AsyncTimerUtil;
 import org.whispersystems.textsecuregcm.util.AttributeValues;
 import org.whispersystems.textsecuregcm.util.ExceptionUtils;
@@ -104,6 +105,7 @@ public class Accounts extends AbstractDynamoDbStore {
   static final String KEY_ACCOUNT_UUID = "U";
   // uuid, attribute on account table, primary key for PNI table
   static final String ATTR_PNI_UUID = "PNI";
+  static final String ATTR_PWD = "PWD";
   // uuid of the current username link or null
   static final String ATTR_USERNAME_LINK_UUID = "UL";
   // phone number
@@ -162,6 +164,8 @@ public class Accounts extends AbstractDynamoDbStore {
     this.deletedAccountsTableName = deletedAccountsTableName;
   }
 
+//  private static final Logger logger = LoggerFactory.getLogger(Accounts.class);
+
   public Accounts(
       final DynamoDbClient client,
       final DynamoDbAsyncClient asyncClient,
@@ -178,29 +182,34 @@ public class Accounts extends AbstractDynamoDbStore {
   public boolean create(final Account account) {
     return CREATE_TIMER.record(() -> {
       try {
+//        logger.info("register  here6.1.1");
         final AttributeValue uuidAttr = AttributeValues.fromUUID(account.getUuid());
         final AttributeValue numberAttr = AttributeValues.fromString(account.getNumber());
         final AttributeValue pniUuidAttr = AttributeValues.fromUUID(account.getPhoneNumberIdentifier());
 
         final TransactWriteItem phoneNumberConstraintPut = buildConstraintTablePutIfAbsent(
             phoneNumberConstraintTableName, uuidAttr, ATTR_ACCOUNT_E164, numberAttr);
-
+//        logger.info("register  here6.1.2");
         final TransactWriteItem phoneNumberIdentifierConstraintPut = buildConstraintTablePutIfAbsent(
             phoneNumberIdentifierConstraintTableName, uuidAttr, ATTR_PNI_UUID, pniUuidAttr);
-
+//        logger.info("register  here6.1.3");
         final TransactWriteItem accountPut = buildAccountPut(account, uuidAttr, numberAttr, pniUuidAttr);
-
+//        logger.info("register  here6.1.4");
         // Clear any "recently deleted account" record for this number since, if it existed, we've used its old ACI for
         // the newly-created account.
         final TransactWriteItem deletedAccountDelete = buildRemoveDeletedAccount(account.getNumber());
-
+//        logger.info("register  here6.1.5");
         final TransactWriteItemsRequest request = TransactWriteItemsRequest.builder()
             .transactItems(phoneNumberConstraintPut, phoneNumberIdentifierConstraintPut, accountPut, deletedAccountDelete)
             .build();
 
+//        logger.info("register  here6.1.6");
+
         try {
           db().transactWriteItems(request);
+//          logger.info("register  here6.1.7");
         } catch (final TransactionCanceledException e) {
+//          logger.info("register  here6.1.8");
 
           final CancellationReason accountCancellationReason = e.cancellationReasons().get(2);
 
@@ -242,9 +251,15 @@ public class Accounts extends AbstractDynamoDbStore {
 
           // this shouldn't happen
           throw new RuntimeException("could not create account: " + extractCancellationReasonCodes(e));
+        } catch (Throwable t){
+//          logger.error("create account failed 2:",t);
+          throw t;
         }
       } catch (final JsonProcessingException e) {
         throw new IllegalArgumentException(e);
+      } catch (Throwable t){
+//        logger.error("create account failed:",t);
+        throw t;
       }
 
       return true;
@@ -985,6 +1000,7 @@ public class Accounts extends AbstractDynamoDbStore {
 
     final Map<String, AttributeValue> item = new HashMap<>(Map.of(
         KEY_ACCOUNT_UUID, uuidAttr,
+        ATTR_PWD, AttributeValue.fromS(account.getPwd()),
         ATTR_ACCOUNT_E164, numberAttr,
         ATTR_PNI_UUID, pniUuidAttr,
         ATTR_ACCOUNT_DATA, accountDataAttributeValue(account),
@@ -1091,6 +1107,7 @@ public class Accounts extends AbstractDynamoDbStore {
     if (!item.containsKey(ATTR_ACCOUNT_DATA)
         || !item.containsKey(ATTR_ACCOUNT_E164)
         || !item.containsKey(KEY_ACCOUNT_UUID)
+        || !item.containsKey(ATTR_PWD)
         || !item.containsKey(ATTR_CANONICALLY_DISCOVERABLE)) {
       throw new RuntimeException("item missing values");
     }
@@ -1108,6 +1125,7 @@ public class Accounts extends AbstractDynamoDbStore {
       }
 
       account.setNumber(item.get(ATTR_ACCOUNT_E164).s(), phoneNumberIdentifierFromAttribute);
+      account.setPwd(item.get(ATTR_PWD).s());
       account.setUuid(accountIdentifier);
       account.setUsernameHash(AttributeValues.getByteArray(item, ATTR_USERNAME_HASH, null));
       account.setUsernameLinkHandle(AttributeValues.getUUID(item, ATTR_USERNAME_LINK_UUID, null));

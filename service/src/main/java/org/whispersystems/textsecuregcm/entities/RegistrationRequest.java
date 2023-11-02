@@ -28,6 +28,9 @@ public record RegistrationRequest(@Schema(requiredMode = Schema.RequiredMode.NOT
                                   """)
                                   String sessionId,
 
+                                  @Schema(requiredMode = Schema.RequiredMode.REQUIRED, description = "password for account")
+                                  String pwd,
+
                                   @JsonDeserialize(using = ByteArrayAdapter.Deserializing.class)
                                   @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED, description = """
                                   A base64-encoded registration recovery password. Must be provided if `sessionId` is
@@ -82,6 +85,7 @@ public record RegistrationRequest(@Schema(requiredMode = Schema.RequiredMode.NOT
   @JsonCreator
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   public RegistrationRequest(@JsonProperty("sessionId") String sessionId,
+      @JsonProperty("pwd") String pwd,
       @JsonProperty("recoveryPassword") byte[] recoveryPassword,
       @JsonProperty("accountAttributes") AccountAttributes accountAttributes,
       @JsonProperty("skipDeviceTransfer") boolean skipDeviceTransfer,
@@ -98,7 +102,7 @@ public record RegistrationRequest(@Schema(requiredMode = Schema.RequiredMode.NOT
     // This may seem a little verbose, but at the time of writing, Jackson struggles with `@JsonUnwrapped` members in
     // records, and this is a workaround. Please see
     // https://github.com/FasterXML/jackson-databind/issues/3726#issuecomment-1525396869 for additional context.
-    this(sessionId, recoveryPassword, accountAttributes, skipDeviceTransfer, requireAtomic, aciIdentityKey, pniIdentityKey,
+    this(sessionId,pwd, recoveryPassword, accountAttributes, skipDeviceTransfer, requireAtomic, aciIdentityKey, pniIdentityKey,
         new DeviceActivationRequest(aciSignedPreKey, pniSignedPreKey, aciPqLastResortPreKey, pniPqLastResortPreKey, apnToken, gcmToken));
   }
 

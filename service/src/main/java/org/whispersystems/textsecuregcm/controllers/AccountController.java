@@ -40,6 +40,7 @@ import org.whispersystems.textsecuregcm.auth.SaltedTokenHash;
 import org.whispersystems.textsecuregcm.auth.TurnToken;
 import org.whispersystems.textsecuregcm.auth.TurnTokenGenerator;
 import org.whispersystems.textsecuregcm.entities.AccountAttributes;
+import org.whispersystems.textsecuregcm.entities.AccountIdResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentifierResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentityResponse;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
@@ -365,6 +366,63 @@ public class AccountController {
           throw ExceptionUtils.wrap(throwable);
         })
         .toCompletableFuture();
+  }
+
+  @GET
+  @Path("/account_id/{aci}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountIdResponse lookupAccountId(
+      @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
+      @PathParam("aci") final String aci) throws RateLimitExceededException {
+
+    if (aci == null || aci.isEmpty()) {
+      throw new WebApplicationException(Response.status(422).build());
+    }
+
+    return accounts
+        .getByAccountIdentifier(UUID.fromString(aci))
+        .map(Account::getNumber)
+        .map(AccountIdResponse::new)
+        .orElseThrow(() -> new WebApplicationException(Status.NOT_FOUND));
+  }
+
+  @GET
+  @Path("/aci/{accountId}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountIdentifierResponse lookupACI(
+      @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
+      @PathParam("accountId") final String accountId) throws RateLimitExceededException {
+
+    if (accountId == null || accountId.isEmpty()) {
+      throw new WebApplicationException(Response.status(422).build());
+    }
+
+    return accounts
+        .getByE164(accountId)
+        .map(Account::getUuid)
+        .map(AciServiceIdentifier::new)
+        .map(AccountIdentifierResponse::new)
+        .orElseThrow(() -> new WebApplicationException(Status.NOT_FOUND));
   }
 
   @GET

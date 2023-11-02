@@ -132,7 +132,7 @@ public class AuthenticatedConnectListener implements WebSocketConnectListener {
     final String userAgent = context.getClient().getUserAgent();
     final AtomicInteger openWebsocketAtomicInteger = getOpenWebsocketCounter(userAgent, authenticated);
     final Timer connectionTimer = getConnectionTimer(userAgent, authenticated);
-
+//    log.info("onWebSocketConnect for authenticated : " + authenticated);
     if (authenticated) {
       final AuthenticatedAccount auth = context.getAuthenticated(AuthenticatedAccount.class);
       final Device device = auth.getAuthenticatedDevice();

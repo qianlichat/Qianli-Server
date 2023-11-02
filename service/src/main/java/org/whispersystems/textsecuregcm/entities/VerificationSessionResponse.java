@@ -12,6 +12,7 @@ import org.whispersystems.textsecuregcm.registration.VerificationSession;
 public record VerificationSessionResponse(String id, @Nullable Long nextSms, @Nullable Long nextCall,
                                           @Nullable Long nextVerificationAttempt, boolean allowedToRequestCode,
                                           List<VerificationSession.Information> requestedInformation,
-                                          boolean verified) {
+                                          boolean verified,
+                                          String publicKey) {
 
 }

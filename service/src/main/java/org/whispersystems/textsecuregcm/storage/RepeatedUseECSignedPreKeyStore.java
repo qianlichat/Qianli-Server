@@ -10,6 +10,8 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.entities.ECSignedPreKey;
 import org.whispersystems.textsecuregcm.util.AttributeValues;
 import org.whispersystems.textsecuregcm.util.ExceptionUtils;
@@ -69,5 +71,23 @@ public class RepeatedUseECSignedPreKeyStore extends RepeatedUseSignedPreKeyStore
 
           throw ExceptionUtils.wrap(throwable);
         });
+  }
+
+  private static final Logger logger = LoggerFactory.getLogger(RepeatedUseECSignedPreKeyStore.class);
+  @Override
+  public CompletableFuture<Void> delete(final UUID identifier) {
+//    logger.info("delete 3 for :" + identifier);
+    return super.delete(identifier);
+  }
+
+  @Override
+  public CompletableFuture<Void> delete(final UUID identifier, final long deviceId) {
+//    logger.info("delete 3 for :" + identifier +",deviceId = " + deviceId);
+    final CompletableFuture<Void> delete = super.delete(identifier, deviceId);
+    delete.exceptionally(ex -> {
+//      logger.error("delete 3 for", ex);
+      throw ExceptionUtils.wrap(ex);
+    });
+    return delete;
   }
 }

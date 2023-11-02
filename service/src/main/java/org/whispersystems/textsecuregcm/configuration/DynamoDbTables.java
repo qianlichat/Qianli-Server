@@ -51,6 +51,8 @@ public class DynamoDbTables {
   private final Table backups;
   private final Table clientReleases;
   private final Table deletedAccounts;
+  private final Table groupsTable;
+  private final Table groupLogsTable;
   private final Table deletedAccountsLock;
   private final IssuedReceiptsTableConfiguration issuedReceipts;
   private final Table ecKeys;
@@ -88,8 +90,9 @@ public class DynamoDbTables {
       @JsonProperty("remoteConfig") final Table remoteConfig,
       @JsonProperty("reportMessage") final Table reportMessage,
       @JsonProperty("subscriptions") final Table subscriptions,
-      @JsonProperty("verificationSessions") final Table verificationSessions) {
-
+      @JsonProperty("verificationSessions") final Table verificationSessions,
+      @JsonProperty("groups") final Table groups,
+      @JsonProperty("groupLogs") final Table groupLogs) {
     this.accounts = accounts;
     this.backups = backups;
     this.clientReleases = clientReleases;
@@ -110,6 +113,8 @@ public class DynamoDbTables {
     this.reportMessage = reportMessage;
     this.subscriptions = subscriptions;
     this.verificationSessions = verificationSessions;
+    this.groupsTable = groups;
+    this.groupLogsTable = groupLogs;
   }
 
   @NotNull
@@ -231,4 +236,12 @@ public class DynamoDbTables {
   public Table getVerificationSessions() {
     return verificationSessions;
   }
+
+  @NotNull
+  @Valid
+  public Table getGroupsTable(){return groupsTable;}
+
+  @NotNull
+  @Valid
+  public Table getGroupLogsTable(){return groupLogsTable;}
 }

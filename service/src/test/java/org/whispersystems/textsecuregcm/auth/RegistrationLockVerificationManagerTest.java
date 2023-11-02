@@ -54,7 +54,7 @@ class RegistrationLockVerificationManagerTest {
   private static PushNotificationManager pushNotificationManager = mock(PushNotificationManager.class);
   private final RateLimiters rateLimiters = mock(RateLimiters.class);
   private final RegistrationLockVerificationManager registrationLockVerificationManager = new RegistrationLockVerificationManager(
-      accountsManager, clientPresenceManager, svr2CredentialsGenerator, registrationRecoveryPasswordsManager, pushNotificationManager, rateLimiters);
+      accountsManager, clientPresenceManager, /*svr2CredentialsGenerator,*/ registrationRecoveryPasswordsManager, pushNotificationManager, rateLimiters);
 
   private final RateLimiter pinLimiter = mock(RateLimiter.class);
 

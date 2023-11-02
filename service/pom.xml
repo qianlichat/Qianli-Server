@@ -18,6 +18,11 @@
 
   <dependencies>
     <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.70</version>
+    </dependency>
+    <dependency>
       <groupId>io.swagger.core.v3</groupId>
       <artifactId>swagger-jaxrs2</artifactId>
       <version>${swagger.version}</version>
@@ -478,6 +483,10 @@
       <artifactId>apollo-api-jvm</artifactId>
       <version>3.8.2</version>
     </dependency>
+      <dependency>
+          <groupId>com.google.cloud</groupId>
+          <artifactId>google-cloud-logging</artifactId>
+      </dependency>
 
   </dependencies>
 

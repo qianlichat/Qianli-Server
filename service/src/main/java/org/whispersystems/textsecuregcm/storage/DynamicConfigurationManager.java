@@ -128,9 +128,9 @@ public class DynamicConfigurationManager<T> {
       // empty configuration means nothing has changed
       return Optional.empty();
     }
-    logger.info("Received new config of length {}, next configuration token: {}",
-        latestConfiguration.configuration().asByteBuffer().remaining(),
-        configurationToken);
+//    logger.info("Received new config of length {}, next configuration token: {}",
+//        latestConfiguration.configuration().asByteBuffer().remaining(),
+//        configurationToken);
 
     try {
       return parseConfiguration(latestConfiguration.configuration().asUtf8String(), configurationClass);

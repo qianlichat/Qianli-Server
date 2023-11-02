@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.whispersystems.textsecuregcm.controllers.VerificationController;
 import org.whispersystems.textsecuregcm.util.AttributeValues;
 import org.whispersystems.textsecuregcm.util.SystemMapper;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
@@ -74,13 +75,17 @@ public abstract class SerializedExpireableJsonDynamoStore<T> {
   }
 
   public CompletableFuture<Void> update(final String key, final T v) {
+    logger.info("/session/{sessionId here6.0,key="+key);
     return put(key, v, ignored -> {
     });
   }
 
+  private static final Logger logger = LoggerFactory.getLogger(SerializedExpireableJsonDynamoStore.class);
+
   private CompletableFuture<Void> put(final String key, final T v,
       final Consumer<PutItemRequest.Builder> putRequestCustomizer) {
     try {
+      logger.info("/session/{sessionId here6.1,key="+key);
       final Map<String, AttributeValue> attributeValueMap = new HashMap<>(Map.of(
           KEY_KEY, AttributeValues.fromString(key),
           ATTR_SERIALIZED_VALUE,
@@ -92,11 +97,13 @@ public abstract class SerializedExpireableJsonDynamoStore<T> {
           .tableName(tableName)
           .item(attributeValueMap);
       putRequestCustomizer.accept(builder);
-
+      logger.info("/session/{sessionId here6.2");
       return dynamoDbClient.putItem(builder.build())
           .thenRun(() -> {
+            logger.info("/session/{sessionId here6.3");
           });
     } catch (final JsonProcessingException e) {
+      logger.info("/session/{sessionId here6.4");
       // This should never happen when writing directly to a string except in cases of serious misconfiguration, which
       // would be caught by tests.
       throw new AssertionError(e);
@@ -108,6 +115,7 @@ public abstract class SerializedExpireableJsonDynamoStore<T> {
   }
 
   public CompletableFuture<Optional<T>> findForKey(final String key) {
+    logger.error("call find for key : " + key);
     return dynamoDbClient.getItem(GetItemRequest.builder()
             .tableName(tableName)
             .consistentRead(true)
@@ -116,8 +124,8 @@ public abstract class SerializedExpireableJsonDynamoStore<T> {
         .thenApply(response -> {
           try {
             return response.hasItem()
-                ? filterMaybeExpiredValue(
-                SystemMapper.jsonMapper()
+                ?
+                Optional.of(SystemMapper.jsonMapper()
                     .readValue(response.item().get(ATTR_SERIALIZED_VALUE).s(), deserializationTargetClass))
                 : Optional.empty();
           } catch (final JsonProcessingException e) {

@@ -7,12 +7,16 @@ package org.whispersystems.textsecuregcm.storage;
 
 import org.signal.libsignal.protocol.InvalidKeyException;
 import org.signal.libsignal.protocol.ecc.ECPublicKey;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.entities.ECPreKey;
 import org.whispersystems.textsecuregcm.util.AttributeValues;
+import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.AttributeValue;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 import static org.whispersystems.textsecuregcm.metrics.MetricsUtil.name;
 
@@ -42,5 +46,22 @@ public class SingleUseECPreKeyStore extends SingleUsePreKeyStore<ECPreKey> {
       // This should never happen since we're serializing keys directly from `ECPublicKey` instances on the way in
       throw new IllegalArgumentException(e);
     }
+  }
+//  private static final Logger logger = LoggerFactory.getLogger(SingleUseECPreKeyStore.class);
+  @Override
+  public CompletableFuture<Void> delete(final UUID identifier, final long deviceId) {
+//    logger.info("delete for :" + identifier +",deviceId = " + deviceId);
+    final CompletableFuture<Void> delete = super.delete(identifier, deviceId);
+    delete.exceptionally(ex ->{
+//      logger.error("delete for err",ex);
+      throw ExceptionUtils.wrap(ex);
+    });
+    return delete;
+  }
+
+  @Override
+  public CompletableFuture<Void> delete(final UUID identifier) {
+//    logger.info("delete for :" + identifier);
+    return super.delete(identifier);
   }
 }

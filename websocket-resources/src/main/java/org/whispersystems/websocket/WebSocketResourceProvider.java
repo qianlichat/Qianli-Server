@@ -95,12 +95,14 @@ public class WebSocketResourceProvider<T extends Principal> implements WebSocket
     this.context.setAuthenticated(authenticated);
     this.session.setIdleTimeout(idleTimeoutMillis);
 
+//    logger.info("onWebSocketConnect");
     connectListener.ifPresent(listener -> listener.onWebSocketConnect(this.context));
+//    logger.info("onWebSocketConnect done");
   }
 
   @Override
   public void onWebSocketError(Throwable cause) {
-    logger.debug("onWebSocketError", cause);
+//    logger.info("onWebSocketError", cause);
 
     final int closeCode;
     final String message;
@@ -117,6 +119,7 @@ public class WebSocketResourceProvider<T extends Principal> implements WebSocket
 
   @Override
   public void onWebSocketBinary(byte[] payload, int offset, int length) {
+//    logger.info("onWebSocketBinary");
     try {
       WebSocketMessage webSocketMessage = messageFactory.parseMessage(payload, offset, length);
 
@@ -132,13 +135,14 @@ public class WebSocketResourceProvider<T extends Principal> implements WebSocket
           break;
       }
     } catch (UninitializedMessageException | InvalidMessageException e) {
-      logger.debug("Parsing", e);
+//      logger.info("Parsing", e);
       close(session, 1018, "Badly formatted");
     }
   }
 
   @Override
   public void onWebSocketClose(int statusCode, String reason) {
+//    logger.error("onWebSocketClose : code = " + statusCode + ", reason" + reason,new Throwable());
     if (context != null) {
       context.notifyClosed(statusCode, reason);
 
@@ -154,10 +158,11 @@ public class WebSocketResourceProvider<T extends Principal> implements WebSocket
 
   @Override
   public void onWebSocketText(String message) {
-    logger.debug("onWebSocketText!");
+//    logger.info("onWebSocketText!");
   }
 
   private void handleRequest(WebSocketRequestMessage requestMessage) {
+//    logger.info("handleRequest : " + requestMessage.getPath());
     ContainerRequest containerRequest = new ContainerRequest(null, URI.create(requestMessage.getPath()), requestMessage.getVerb(), new WebSocketSecurityContext(new ContextPrincipal(context)), new MapPropertiesDelegate(new HashMap<>()), jerseyHandler.getConfiguration());
     containerRequest.headers(getCombinedHeaders(session.getUpgradeRequest().getHeaders(), requestMessage.getHeaders()));
 

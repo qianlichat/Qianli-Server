@@ -123,8 +123,8 @@ public class AssignUsernameCommand extends EnvironmentCommand<WhisperServerConfi
 
     ExternalServiceCredentialsGenerator storageCredentialsGenerator = SecureStorageController.credentialsGenerator(
         configuration.getSecureStorageServiceConfiguration());
-    ExternalServiceCredentialsGenerator secureValueRecoveryCredentialsGenerator = SecureValueRecovery2Controller.credentialsGenerator(
-        configuration.getSvr2Configuration());
+//    ExternalServiceCredentialsGenerator secureValueRecoveryCredentialsGenerator = SecureValueRecovery2Controller.credentialsGenerator(
+//        configuration.getSvr2Configuration());
 
     DynamicConfigurationManager<DynamicConfiguration> dynamicConfigurationManager = new DynamicConfigurationManager<>(
         configuration.getAppConfig().getApplication(), configuration.getAppConfig().getEnvironment(),
@@ -180,9 +180,9 @@ public class AssignUsernameCommand extends EnvironmentCommand<WhisperServerConfi
         configuration.getClientPresenceClusterConfiguration(), redisClusterClientResources);
     FaultTolerantRedisCluster rateLimitersCluster = new FaultTolerantRedisCluster("rate_limiters",
         configuration.getRateLimitersCluster(), redisClusterClientResources);
-    SecureValueRecovery2Client secureValueRecovery2Client = new SecureValueRecovery2Client(
-        secureValueRecoveryCredentialsGenerator, secureValueRecoveryExecutor, secureValueRecoveryServiceRetryExecutor,
-        configuration.getSvr2Configuration());
+//    SecureValueRecovery2Client secureValueRecovery2Client = new SecureValueRecovery2Client(
+//        secureValueRecoveryCredentialsGenerator, secureValueRecoveryExecutor, secureValueRecoveryServiceRetryExecutor,
+//        configuration.getSvr2Configuration());
     SecureStorageClient secureStorageClient = new SecureStorageClient(storageCredentialsGenerator,
         storageServiceExecutor, storageServiceRetryExecutor, configuration.getSecureStorageServiceConfiguration());
     ClientPresenceManager clientPresenceManager = new ClientPresenceManager(clientPresenceCluster,
@@ -201,7 +201,7 @@ public class AssignUsernameCommand extends EnvironmentCommand<WhisperServerConfi
         configuration.getDynamoDbTables().getDeletedAccountsLock().getTableName());
     AccountsManager accountsManager = new AccountsManager(accounts, phoneNumberIdentifiers, cacheCluster,
         accountLockManager, keys, messagesManager, profilesManager,
-            secureStorageClient, secureValueRecovery2Client, clientPresenceManager,
+            secureStorageClient,/* secureValueRecovery2Client, */clientPresenceManager,
         experimentEnrollmentManager, registrationRecoveryPasswordsManager, accountLockExecutor, Clock.systemUTC());
 
     final String usernameHash = namespace.getString("usernameHash");

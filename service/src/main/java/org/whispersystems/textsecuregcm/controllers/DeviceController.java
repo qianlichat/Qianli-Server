@@ -45,11 +45,14 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import org.glassfish.jersey.server.ContainerRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.auth.AuthEnablementRefreshRequirementProvider;
 import org.whispersystems.textsecuregcm.auth.AuthenticatedAccount;
 import org.whispersystems.textsecuregcm.auth.BasicAuthorizationHeader;
 import org.whispersystems.textsecuregcm.auth.ChangesDeviceEnabledState;
 import org.whispersystems.textsecuregcm.auth.SaltedTokenHash;
+import org.whispersystems.textsecuregcm.auth.WebsocketRefreshRequestEventListener;
 import org.whispersystems.textsecuregcm.entities.AccountAttributes;
 import org.whispersystems.textsecuregcm.entities.DeviceActivationRequest;
 import org.whispersystems.textsecuregcm.entities.DeviceInfo;
@@ -90,6 +93,8 @@ public class DeviceController {
 
   @VisibleForTesting
   static final Duration TOKEN_EXPIRATION_DURATION = Duration.ofMinutes(10);
+
+  private static final Logger logger = LoggerFactory.getLogger(WebsocketRefreshRequestEventListener.class);
 
   public DeviceController(byte[] linkDeviceSecret,
       AccountsManager accounts,
@@ -390,10 +395,10 @@ public class DeviceController {
       throw new DeviceLimitExceededException(account.getDevices().size(), maxDeviceLimit);
     }
 
-    final DeviceCapabilities capabilities = accountAttributes.getCapabilities();
-    if (capabilities != null && isCapabilityDowngrade(account, capabilities)) {
-      throw new WebApplicationException(Response.status(409).build());
-    }
+//    final DeviceCapabilities capabilities = accountAttributes.getCapabilities();
+//    if (capabilities != null && isCapabilityDowngrade(account, capabilities)) {
+//      throw new WebApplicationException(Response.status(409).build());
+//    }
 
     final Device device = new Device();
     device.setName(accountAttributes.getName());
@@ -418,17 +423,19 @@ public class DeviceController {
           device.setGcmId(gcmRegistrationId.gcmRegistrationId()));
     });
 
+//    logger.info("here device 1");
     final Account updatedAccount = accounts.update(account, a -> {
+//      logger.info("here device 2");
       device.setId(a.getNextDeviceId());
-
+//      logger.info("here device 3");
       final CompletableFuture<Void> deleteKeysFuture = CompletableFuture.allOf(
           keys.delete(a.getUuid(), device.getId()),
           keys.delete(a.getPhoneNumberIdentifier(), device.getId()));
-
+//      logger.info("here device 4");
       messages.clear(a.getUuid(), device.getId()).join();
-
+//      logger.info("here device 5");
       deleteKeysFuture.join();
-
+//      logger.info("here device 6");
       maybeDeviceActivationRequest.ifPresent(deviceActivationRequest -> CompletableFuture.allOf(
               keys.storeEcSignedPreKeys(a.getUuid(),
                   Map.of(device.getId(), deviceActivationRequest.aciSignedPreKey().get())),
@@ -439,15 +446,15 @@ public class DeviceController {
               keys.storePqLastResort(a.getPhoneNumberIdentifier(),
                   Map.of(device.getId(), deviceActivationRequest.pniPqLastResortPreKey().get())))
           .join());
-
+//      logger.info("here device 7");
       a.addDevice(device);
     });
-
+//    logger.info("here device 8");
     if (maybeAciFromToken.isPresent()) {
       usedTokenCluster.useCluster(connection ->
           connection.sync().set(getUsedTokenKey(verificationCode), "", new SetArgs().ex(TOKEN_EXPIRATION_DURATION)));
     }
-
+//    logger.info("here device 9");
     return new Pair<>(updatedAccount, device);
   }
 

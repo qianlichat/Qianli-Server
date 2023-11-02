@@ -381,7 +381,7 @@ public class MessageController {
       @QueryParam("urgent") @DefaultValue("true") final boolean isUrgent,
       @QueryParam("story") boolean isStory,
       @NotNull @Valid MultiRecipientMessage multiRecipientMessage) {
-
+//    logger.info("send to multi_recipient");
     final Map<ServiceIdentifier, Account> accountsByServiceIdentifier = new HashMap<>();
 
     for (final Recipient recipient : multiRecipientMessage.recipients()) {
@@ -533,6 +533,8 @@ public class MessageController {
   public CompletableFuture<OutgoingMessageEntityList> getPendingMessages(@Auth AuthenticatedAccount auth,
       @HeaderParam(Stories.X_SIGNAL_RECEIVE_STORIES) String receiveStoriesHeader,
       @HeaderParam(HttpHeaders.USER_AGENT) String userAgent) {
+
+//    logger.info("getPendingMessages : " + auth.getAccount().getUuid());
 
     boolean shouldReceiveStories = Stories.parseReceiveStoriesHeader(receiveStoriesHeader);
 
@@ -691,7 +693,7 @@ public class MessageController {
         logger.warn("Received bad envelope type {} from {}", incomingMessage.type(), userAgentString);
         throw new BadRequestException(e);
       }
-
+//      logger.info("sendMessage to " + destinationDevice.getId()+", online = " + online);
       messageSender.sendMessage(destinationAccount, destinationDevice, envelope, online);
     } catch (NotPushRegisteredException e) {
       if (destinationDevice.isPrimary()) throw new NoSuchUserException(e);
@@ -708,6 +710,7 @@ public class MessageController {
       Recipient recipient,
       byte[] commonPayload) throws NoSuchUserException {
     try {
+//      logger.info("sendCommonPayloadMessage to " + destinationAccount.getUuid());
       Envelope.Builder messageBuilder = Envelope.newBuilder();
       long serverTimestamp = System.currentTimeMillis();
       byte[] recipientKeyMaterial = recipient.perRecipientKeyMaterial();
