@@ -159,7 +159,7 @@ class AccountControllerTest {
           rateLimiters,
           turnTokenGenerator,
           registrationRecoveryPasswordsManager,
-          usernameZkProofVerifier
+          usernameZkProofVerifier,null
       ))
       .build();
 
