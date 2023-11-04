@@ -8,11 +8,20 @@ import io.dropwizard.auth.Auth;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.security.GeneralSecurityException;
+import java.security.KeyPair;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
+import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
@@ -22,16 +31,21 @@ import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import org.signal.libsignal.usernames.BaseUsernameException;
+import org.signal.storageservice.auth.ExternalServiceCredentialValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.auth.AccountAndAuthenticatedDeviceHolder;
 import org.whispersystems.textsecuregcm.auth.AuthenticatedAccount;
 import org.whispersystems.textsecuregcm.auth.ChangesDeviceEnabledState;
@@ -44,34 +58,46 @@ import org.whispersystems.textsecuregcm.entities.AccountIdResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentifierResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentityResponse;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
+import org.whispersystems.textsecuregcm.entities.ChangePasswordRequest;
 import org.whispersystems.textsecuregcm.entities.ConfirmUsernameHashRequest;
 import org.whispersystems.textsecuregcm.entities.DeviceName;
 import org.whispersystems.textsecuregcm.entities.EncryptedUsername;
 import org.whispersystems.textsecuregcm.entities.GcmRegistrationId;
 import org.whispersystems.textsecuregcm.entities.RegistrationLock;
+import org.whispersystems.textsecuregcm.entities.RegistrationServiceSession;
 import org.whispersystems.textsecuregcm.entities.ReserveUsernameHashRequest;
 import org.whispersystems.textsecuregcm.entities.ReserveUsernameHashResponse;
 import org.whispersystems.textsecuregcm.entities.UsernameHashResponse;
 import org.whispersystems.textsecuregcm.entities.UsernameLinkHandle;
+import org.whispersystems.textsecuregcm.entities.VerificationSessionResponse;
 import org.whispersystems.textsecuregcm.identity.AciServiceIdentifier;
 import org.whispersystems.textsecuregcm.identity.ServiceIdentifier;
 import org.whispersystems.textsecuregcm.limits.RateLimitedByIp;
+import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
+import org.whispersystems.textsecuregcm.metrics.UserAgentTagUtil;
+import org.whispersystems.textsecuregcm.registration.VerificationSession;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
 import org.whispersystems.textsecuregcm.storage.Device;
 import org.whispersystems.textsecuregcm.storage.RegistrationRecoveryPasswordsManager;
 import org.whispersystems.textsecuregcm.storage.UsernameHashNotAvailableException;
 import org.whispersystems.textsecuregcm.storage.UsernameReservationNotFoundException;
+import org.whispersystems.textsecuregcm.storage.VerificationSessionManager;
 import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import org.whispersystems.textsecuregcm.util.HeaderUtils;
+import org.whispersystems.textsecuregcm.util.RSAUtils;
+import org.whispersystems.textsecuregcm.util.UUIDUtil;
 import org.whispersystems.textsecuregcm.util.UsernameHashZkProofVerifier;
 import org.whispersystems.textsecuregcm.util.Util;
+
+import static org.whispersystems.textsecuregcm.controllers.VerificationController.DYNAMODB_TIMEOUT;
 
 @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
 @Path("/v1/accounts")
 @io.swagger.v3.oas.annotations.tags.Tag(name = "Account")
 public class AccountController {
+
   public static final int MAXIMUM_USERNAME_HASHES_LIST_LENGTH = 20;
   public static final int USERNAME_HASH_LENGTH = 32;
   public static final int MAXIMUM_USERNAME_CIPHERTEXT_LENGTH = 128;
@@ -81,18 +107,22 @@ public class AccountController {
   private final TurnTokenGenerator turnTokenGenerator;
   private final RegistrationRecoveryPasswordsManager registrationRecoveryPasswordsManager;
   private final UsernameHashZkProofVerifier usernameHashZkProofVerifier;
+  private final Logger logger = LoggerFactory.getLogger(AccountController.class);
+  private final VerificationSessionManager verificationSessionManager;
 
   public AccountController(
       AccountsManager accounts,
       RateLimiters rateLimiters,
       TurnTokenGenerator turnTokenGenerator,
       RegistrationRecoveryPasswordsManager registrationRecoveryPasswordsManager,
-      UsernameHashZkProofVerifier usernameHashZkProofVerifier) {
+      UsernameHashZkProofVerifier usernameHashZkProofVerifier,
+      VerificationSessionManager verificationSessionManager) {
     this.accounts = accounts;
     this.rateLimiters = rateLimiters;
     this.turnTokenGenerator = turnTokenGenerator;
     this.registrationRecoveryPasswordsManager = registrationRecoveryPasswordsManager;
     this.usernameHashZkProofVerifier = usernameHashZkProofVerifier;
+    this.verificationSessionManager = verificationSessionManager;
   }
 
   @GET
@@ -202,7 +232,8 @@ public class AccountController {
 
   @PUT
   @Path("/name/")
-  public void setName(@Auth DisabledPermittedAuthenticatedAccount disabledPermittedAuth, @NotNull @Valid DeviceName deviceName) {
+  public void setName(@Auth DisabledPermittedAuthenticatedAccount disabledPermittedAuth,
+      @NotNull @Valid DeviceName deviceName) {
     Account account = disabledPermittedAuth.getAccount();
     Device device = disabledPermittedAuth.getAuthenticatedDevice();
     accounts.updateDevice(account, device.getId(), d -> d.setName(deviceName.getDeviceName()));
@@ -239,7 +270,8 @@ public class AccountController {
 
     // if registration recovery password was sent to us, store it (or refresh its expiration)
     attributes.recoveryPassword().ifPresent(registrationRecoveryPassword ->
-        registrationRecoveryPasswordsManager.storeForCurrentNumber(updatedAccount.getNumber(), registrationRecoveryPassword));
+        registrationRecoveryPasswordsManager.storeForCurrentNumber(updatedAccount.getNumber(),
+            registrationRecoveryPassword));
   }
 
   @GET
@@ -369,6 +401,158 @@ public class AccountController {
   }
 
   @GET
+  @Path("/password_sign")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public VerificationSessionResponse getPasswordSignKey(
+      @Auth final AuthenticatedAccount auth) throws RateLimitExceededException {
+    rateLimiters.forDescriptor(RateLimiters.For.GET_PASSWORD_SIGN_KEY_OPERATION).validate(auth.getAccount().getUuid());
+    String accountName = auth.getAccount().getNumber();
+    if (accountName == null) {
+      logger.error("getPasswordSignKey, can not get account name");
+      throw new ServerErrorException("could not get account name", Response.Status.BAD_REQUEST);
+    }
+    final RegistrationServiceSession registrationServiceSession;
+    try {
+      byte[] sessionId = UUIDUtil.toBytes(UUID.randomUUID());
+      registrationServiceSession = new RegistrationServiceSession(sessionId,
+          accountName, true, null, null, null, Instant.now().getEpochSecond() + 600);
+    } catch (final CancellationException e) {
+
+      throw new ServerErrorException("registration service unavailable", Response.Status.SERVICE_UNAVAILABLE);
+    } catch (final CompletionException e) {
+
+      if (ExceptionUtils.unwrap(e) instanceof RateLimitExceededException re) {
+        RateLimiter.adaptLegacyException(() -> {
+          throw re;
+        });
+      }
+
+      throw new ServerErrorException(Response.Status.INTERNAL_SERVER_ERROR, e);
+    }
+
+    final KeyPair generate = RSAUtils.generate();
+    final String publicKey = RSAUtils.keyToBase64(generate.getPublic());
+    final String privateKey = RSAUtils.keyToBase64(generate.getPrivate());
+
+//    logger.info("generate key for session : " + registrationServiceSession.encodedSessionId());
+//    logger.info("generate private key = " + privateKey);
+//    logger.info("generate public key = " + publicKey);
+    final Clock clock = Clock.systemUTC();
+    VerificationSession verificationSession = new VerificationSession(null, new ArrayList<>(),
+        Collections.emptyList(), false,
+        clock.millis(), clock.millis(), registrationServiceSession.expiration(),
+        accountName,
+        publicKey,
+        privateKey);
+
+    storeVerificationSession(registrationServiceSession, verificationSession);
+
+    return new VerificationSessionResponse(registrationServiceSession.encodedSessionId(),
+        null,
+        null,
+        null,
+        verificationSession.allowedToRequestCode(), verificationSession.requestedInformation(),
+        true,
+        verificationSession.publicKey());
+  }
+
+
+  @GET
+  @Path("/password")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public void changePassword(
+      @Auth final AuthenticatedAccount auth, @NotNull @Valid ChangePasswordRequest req)
+      throws RateLimitExceededException {
+    final Account account = auth.getAccount();
+    rateLimiters.forDescriptor(RateLimiters.For.CHANGE_PASSWORD_OPERATION).validate(account.getUuid());
+    String accountName = account.getNumber();
+    if (accountName == null) {
+      logger.error("getPasswordSignKey, can not get account name");
+      throw new ServerErrorException("could not get account name", Response.Status.BAD_REQUEST);
+    }
+
+    String sessionId = req.sessionId();
+    if (sessionId == null) {
+      throw new BadRequestException("sessionId is null");
+    }
+    String oldPwd = req.oldPwd();
+    if (oldPwd == null) {
+      throw new BadRequestException("oldPwd is null");
+    }
+    String newPwd = req.newPwd();
+    if (newPwd == null) {
+      throw new BadRequestException("newPwd is null");
+    }
+
+    final VerificationSession verificationSession = retrieveVerificationSession(sessionId);
+
+    String newPwdDecrypted = "";
+    try {
+      newPwdDecrypted = RSAUtils.decrypt(newPwd, verificationSession.privateKey());
+    } catch (GeneralSecurityException e) {
+      logger.error("decrypt newPwd error when change password", e);
+      throw new BadRequestException("decrypt error new pwd");
+    }
+    if (newPwdDecrypted.isEmpty()) {
+      throw new BadRequestException("decrypt newPwd error, null pwd");
+    }
+
+    String oldPwdDecrypted = "";
+    try {
+      oldPwdDecrypted = RSAUtils.decrypt(oldPwd, verificationSession.privateKey());
+    } catch (GeneralSecurityException e) {
+      logger.error("decrypt error when change password", e);
+      throw new BadRequestException("decrypt error old pwd");
+    }
+    if (oldPwdDecrypted.isEmpty()) {
+      throw new BadRequestException("decrypt error, null pwd");
+    }
+//    logger.info("register n" + "umber="+number+", after pwd = " + pwd);
+    if (!Objects.equals(oldPwdDecrypted, account.getPwd())) {
+      logger.error("修改密码失败：" + account.getNumber() + ", 密码错误");
+      throw new NotAuthorizedException("wrong password", Response.Status.UNAUTHORIZED);
+    }
+
+    account.setPwd(newPwdDecrypted);
+    accounts.updateAsync(account,(acc -> {}));
+  }
+
+  private VerificationSession retrieveVerificationSession(String encodedSessionId) {
+
+    return verificationSessionManager.findForId(encodedSessionId)
+        .orTimeout(5, TimeUnit.SECONDS)
+        .join().orElseThrow(NotFoundException::new);
+  }
+
+
+  private void storeVerificationSession(final RegistrationServiceSession registrationServiceSession,
+      final VerificationSession verificationSession) {
+    verificationSessionManager.insert(registrationServiceSession.encodedSessionId(), verificationSession)
+        .orTimeout(DYNAMODB_TIMEOUT.toSeconds(), TimeUnit.SECONDS)
+        .join();
+  }
+
+  @GET
   @Path("/account_id/{aci}")
   @Produces(MediaType.APPLICATION_JSON)
   @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
@@ -382,8 +566,10 @@ public class AccountController {
   @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
   @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
   public AccountIdResponse lookupAccountId(
-      @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
+      @Auth final AuthenticatedAccount auth,
       @PathParam("aci") final String aci) throws RateLimitExceededException {
+
+    rateLimiters.forDescriptor(RateLimiters.For.LOOKUP_ACCOUNT_ID_OPERATION).validate(auth.getAccount().getUuid());
 
     if (aci == null || aci.isEmpty()) {
       throw new WebApplicationException(Response.status(422).build());
@@ -410,8 +596,10 @@ public class AccountController {
   @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
   @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
   public AccountIdentifierResponse lookupACI(
-      @Auth final Optional<AuthenticatedAccount> maybeAuthenticatedAccount,
+      @Auth final AuthenticatedAccount auth,
       @PathParam("accountId") final String accountId) throws RateLimitExceededException {
+
+    rateLimiters.forDescriptor(RateLimiters.For.LOOKUP_ACI_OPERATION).validate(auth.getAccount().getUuid());
 
     if (accountId == null || accountId.isEmpty()) {
       throw new WebApplicationException(Response.status(422).build());
@@ -570,7 +758,8 @@ public class AccountController {
 
   @DELETE
   @Path("/me")
-  public CompletableFuture<Void> deleteAccount(@Auth DisabledPermittedAuthenticatedAccount auth) throws InterruptedException {
+  public CompletableFuture<Void> deleteAccount(@Auth DisabledPermittedAuthenticatedAccount auth)
+      throws InterruptedException {
     return accounts.delete(auth.getAccount(), AccountsManager.DeletionReason.USER_REQUEST);
   }
 

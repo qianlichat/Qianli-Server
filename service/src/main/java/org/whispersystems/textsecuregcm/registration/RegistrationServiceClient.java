@@ -17,25 +17,16 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.StringUtils;
 import org.checkerframework.checker.nullness.qual.Nullable;
-import org.signal.registration.rpc.CheckVerificationCodeRequest;
-import org.signal.registration.rpc.CreateRegistrationSessionRequest;
-import org.signal.registration.rpc.GetRegistrationSessionMetadataRequest;
 import org.signal.registration.rpc.RegistrationServiceGrpc;
-import org.signal.registration.rpc.RegistrationSessionMetadata;
-import org.signal.registration.rpc.SendVerificationCodeRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.whispersystems.textsecuregcm.controllers.RateLimitExceededException;
-import org.whispersystems.textsecuregcm.controllers.VerificationController;
-import org.whispersystems.textsecuregcm.controllers.VerificationSessionRateLimitExceededException;
 import org.whispersystems.textsecuregcm.entities.RegistrationServiceSession;
 import org.whispersystems.textsecuregcm.util.UUIDUtil;
 
@@ -230,10 +221,10 @@ public class RegistrationServiceClient implements Managed {
 //        });
   }
 
-  private static RegistrationServiceSession buildSessionResponseFromMetadata(
+  public static RegistrationServiceSession buildSessionResponseFromMetadata(
       final byte[] sessionBytes,String accountName,boolean accountExists) {
     return new RegistrationServiceSession(sessionBytes,
-        accountName,accountExists,null,null,null,0);
+        accountName,accountExists,null,null,null, Instant.now().getEpochSecond() + 600);
   }
 
   private static Deadline toDeadline(final Duration timeout) {

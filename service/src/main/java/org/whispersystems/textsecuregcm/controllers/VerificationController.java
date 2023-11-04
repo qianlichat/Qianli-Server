@@ -68,27 +68,10 @@ public class VerificationController {
 
   private static final Logger logger = LoggerFactory.getLogger(VerificationController.class);
   private static final Duration REGISTRATION_RPC_TIMEOUT = Duration.ofSeconds(15);
-  private static final Duration DYNAMODB_TIMEOUT = Duration.ofSeconds(5);
-
-  private static final SecureRandom RANDOM = new SecureRandom();
-
-  private static final String PUSH_CHALLENGE_COUNTER_NAME = name(VerificationController.class, "pushChallenge");
-  private static final String CHALLENGE_PRESENT_TAG_NAME = "present";
-  private static final String CHALLENGE_MATCH_TAG_NAME = "matches";
-  private static final String CAPTCHA_ATTEMPT_COUNTER_NAME = name(VerificationController.class, "captcha");
-  private static final String COUNTRY_CODE_TAG_NAME = "countryCode";
-  private static final String REGION_CODE_TAG_NAME = "regionCode";
-  private static final String SCORE_TAG_NAME = "score";
-  private static final String CODE_REQUESTED_COUNTER_NAME = name(VerificationController.class, "codeRequested");
-  private static final String VERIFICATION_TRANSPORT_TAG_NAME = "transport";
-  private static final String VERIFIED_COUNTER_NAME = name(VerificationController.class, "verified");
-  private static final String SUCCESS_TAG_NAME = "success";
+  public static final Duration DYNAMODB_TIMEOUT = Duration.ofSeconds(5);
 
   private final RegistrationServiceClient registrationServiceClient;
   private final VerificationSessionManager verificationSessionManager;
-  private final PushNotificationManager pushNotificationManager;
-  private final RegistrationCaptchaManager registrationCaptchaManager;
-  private final RegistrationRecoveryPasswordsManager registrationRecoveryPasswordsManager;
   private final RateLimiters rateLimiters;
   private final AccountsManager accountsManager;
 
@@ -104,9 +87,8 @@ public class VerificationController {
       final Clock clock) {
     this.registrationServiceClient = registrationServiceClient;
     this.verificationSessionManager = verificationSessionManager;
-    this.pushNotificationManager = pushNotificationManager;
-    this.registrationCaptchaManager = registrationCaptchaManager;
-    this.registrationRecoveryPasswordsManager = registrationRecoveryPasswordsManager;
+//    this.pushNotificationManager = pushNotificationManager;
+//    this.registrationCaptchaManager = registrationCaptchaManager;
     this.rateLimiters = rateLimiters;
     this.accountsManager = accountsManager;
     this.clock = clock;
@@ -118,10 +100,14 @@ public class VerificationController {
   @Produces(MediaType.APPLICATION_JSON)
   public VerificationSessionResponse createSession(@NotNull @Valid CreateVerificationSessionRequest request)
       throws RateLimitExceededException {
-    String accountName = request.getNumber();
-    if (accountName == null) {
+    final String an = request.getNumber();
+    if (an == null) {
       throw new ServerErrorException("could not get account name", Response.Status.BAD_REQUEST);
     }
+
+    RateLimiter.adaptLegacyException(() -> rateLimiters.getRegistrationLimiter().validate(an));
+
+    String accountName = an;
     if (accountName.startsWith("@")) {
       accountName = accountName.substring(1);
     }

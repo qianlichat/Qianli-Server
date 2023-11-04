@@ -712,16 +712,6 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
     webSocketEnvironment.jersey().register(new MetricsApplicationEventListener(TrafficSource.WEBSOCKET, clientReleaseManager));
     webSocketEnvironment.jersey().register(new KeepAliveController(clientPresenceManager));
 
-    // these should be common, but use @Auth DisabledPermittedAccount, which isn’t supported yet on websocket
-    environment.jersey().register(
-        new AccountController(accountsManager, rateLimiters,
-            turnTokenGenerator,
-            registrationRecoveryPasswordsManager, usernameHashZkProofVerifier));
-    ExternalGroupCredentialGenerator externalGroupCredentialGenerator = new ExternalGroupCredentialGenerator(
-        config.getGroup().getExternalServiceSecret(), Clock.systemUTC());
-
-    environment.jersey().register(new KeysController(rateLimiters, keys, accountsManager));
-
     boolean registeredSpamFilter = false;
     ReportSpamTokenProvider reportSpamTokenProvider = null;
 
@@ -768,6 +758,17 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
       reportSpamTokenProvider = ReportSpamTokenProvider.noop();
     }
 
+    final VerificationSessionManager verificationSessionManager = new VerificationSessionManager(verificationSessions);
+
+    environment.jersey().register(
+        new AccountController(accountsManager, rateLimiters,
+            turnTokenGenerator,
+            registrationRecoveryPasswordsManager, usernameHashZkProofVerifier,verificationSessionManager));
+    ExternalGroupCredentialGenerator externalGroupCredentialGenerator = new ExternalGroupCredentialGenerator(
+        config.getGroup().getExternalServiceSecret(), Clock.systemUTC());
+
+    environment.jersey().register(new KeysController(rateLimiters, keys, accountsManager));
+
     final List<Object> commonControllers = Lists.newArrayList(
         new AccountControllerV2(accountsManager, changeNumberManager, phoneVerificationTokenManager,
             registrationLockVerificationManager, rateLimiters),
@@ -793,7 +794,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
             profileBadgeConverter, config.getBadges(), cdnS3Client, profileCdnPolicyGenerator, profileCdnPolicySigner,
             config.getCdnConfiguration().bucket(), zkProfileOperations, batchIdentityCheckExecutor),
         new ProvisioningController(rateLimiters, provisioningManager),
-        new RegistrationController(accountsManager,new VerificationSessionManager(verificationSessions), phoneVerificationTokenManager, registrationLockVerificationManager,
+        new RegistrationController(accountsManager, verificationSessionManager, phoneVerificationTokenManager, registrationLockVerificationManager,
             keys, rateLimiters),
         new RemoteConfigController(remoteConfigsManager, adminEventLogger,
             config.getRemoteConfigConfiguration().authorizedUsers(),
@@ -806,7 +807,7 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         new StickerController(rateLimiters, config.getCdnConfiguration().accessKey().value(),
             config.getCdnConfiguration().accessSecret().value(), config.getCdnConfiguration().region(),
             config.getCdnConfiguration().bucket()),
-        new VerificationController(registrationServiceClient, new VerificationSessionManager(verificationSessions),
+        new VerificationController(registrationServiceClient, verificationSessionManager,
             pushNotificationManager, registrationCaptchaManager, registrationRecoveryPasswordsManager, rateLimiters,
             accountsManager, clock),
         new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator,zkAuthOperations)
