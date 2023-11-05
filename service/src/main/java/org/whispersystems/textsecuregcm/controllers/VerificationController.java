@@ -117,7 +117,7 @@ public class VerificationController {
     }
 
     final RegistrationServiceSession registrationServiceSession;
-    boolean accountExists = accountsManager.getByE164(request.getNumber()).isPresent();
+    boolean accountExists = accountsManager.getByE164(accountName).isPresent();
     try {
       registrationServiceSession = registrationServiceClient.createRegistrationSession(accountName,
           accountExists,
@@ -153,7 +153,7 @@ public class VerificationController {
 
     storeVerificationSession(registrationServiceSession, verificationSession);
 
-    return buildResponse(registrationServiceSession.encodedSessionId(), verificationSession,accountExists);
+    return buildResponse(registrationServiceSession.encodedSessionId(), verificationSession, accountExists);
   }
 
   @FilterSpam
