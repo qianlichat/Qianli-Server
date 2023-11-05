@@ -467,7 +467,7 @@ public class AccountController {
   }
 
 
-  @GET
+  @PUT
   @Path("/password")
   @Produces(MediaType.APPLICATION_JSON)
   @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
