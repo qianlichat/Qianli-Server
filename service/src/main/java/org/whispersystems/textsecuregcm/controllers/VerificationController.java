@@ -111,8 +111,8 @@ public class VerificationController {
     if (accountName.startsWith("@")) {
       accountName = accountName.substring(1);
     }
-    if (!accountName.matches("[a-zA-Z0-9]+")) {
-      throw new ServerErrorException("account name is invalidate, only alphabet and numbers are allowed",
+    if (!accountName.matches("[a-z0-9]+")) {
+      throw new ServerErrorException("account name is invalidate, only lowercase alphabet and numbers are allowed",
           Response.Status.BAD_REQUEST);
     }
 
