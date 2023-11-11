@@ -116,6 +116,11 @@ public class VerificationController {
           Response.Status.BAD_REQUEST);
     }
 
+    if(accountName.length() < 3 || accountName.length() > 9) {
+      throw new ServerErrorException("The length of account name should be at 3 ~ 9",
+          Response.Status.BAD_REQUEST);
+    }
+
     final RegistrationServiceSession registrationServiceSession;
     boolean accountExists = accountsManager.getByE164(accountName).isPresent();
     try {
