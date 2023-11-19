@@ -108,6 +108,7 @@ import org.whispersystems.textsecuregcm.controllers.DonationController;
 import org.whispersystems.textsecuregcm.controllers.KeepAliveController;
 import org.whispersystems.textsecuregcm.controllers.KeysController;
 import org.whispersystems.textsecuregcm.controllers.MessageController;
+import org.whispersystems.textsecuregcm.controllers.PingController;
 import org.whispersystems.textsecuregcm.controllers.ProfileController;
 import org.whispersystems.textsecuregcm.controllers.ProvisioningController;
 import org.whispersystems.textsecuregcm.controllers.RegistrationController;
@@ -810,7 +811,8 @@ public class WhisperServerService extends Application<WhisperServerConfiguration
         new VerificationController(registrationServiceClient, verificationSessionManager,
             pushNotificationManager, registrationCaptchaManager, registrationRecoveryPasswordsManager, rateLimiters,
             accountsManager, clock),
-        new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator,zkAuthOperations)
+        new GroupsController(clock,groupsManager,zkSecretParams,profileCdnPolicySigner,profileCdnPolicyGenerator,config.getGroup(),externalGroupCredentialGenerator,zkAuthOperations),
+        new PingController()
     );
 //    if (config.getSubscription() != null && config.getOneTimeDonations() != null) {
 //      commonControllers.add(new SubscriptionController(clock, config.getSubscription(), config.getOneTimeDonations(),
