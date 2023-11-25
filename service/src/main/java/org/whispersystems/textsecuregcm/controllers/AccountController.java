@@ -8,11 +8,16 @@ import io.dropwizard.auth.Auth;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Objects;
@@ -23,6 +28,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
 import javax.ws.rs.BadRequestException;
@@ -42,8 +49,8 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import org.apache.commons.codec.binary.Base32;
 import org.signal.libsignal.usernames.BaseUsernameException;
-import org.signal.storageservice.auth.ExternalServiceCredentialValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.whispersystems.textsecuregcm.auth.AccountAndAuthenticatedDeviceHolder;
@@ -57,6 +64,8 @@ import org.whispersystems.textsecuregcm.entities.AccountAttributes;
 import org.whispersystems.textsecuregcm.entities.AccountIdResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentifierResponse;
 import org.whispersystems.textsecuregcm.entities.AccountIdentityResponse;
+import org.whispersystems.textsecuregcm.entities.AccountTotpBindResponse;
+import org.whispersystems.textsecuregcm.entities.AccountTotpGenResponse;
 import org.whispersystems.textsecuregcm.entities.ApnRegistrationId;
 import org.whispersystems.textsecuregcm.entities.ChangePasswordRequest;
 import org.whispersystems.textsecuregcm.entities.ConfirmUsernameHashRequest;
@@ -75,7 +84,6 @@ import org.whispersystems.textsecuregcm.identity.ServiceIdentifier;
 import org.whispersystems.textsecuregcm.limits.RateLimitedByIp;
 import org.whispersystems.textsecuregcm.limits.RateLimiter;
 import org.whispersystems.textsecuregcm.limits.RateLimiters;
-import org.whispersystems.textsecuregcm.metrics.UserAgentTagUtil;
 import org.whispersystems.textsecuregcm.registration.VerificationSession;
 import org.whispersystems.textsecuregcm.storage.Account;
 import org.whispersystems.textsecuregcm.storage.AccountsManager;
@@ -87,6 +95,7 @@ import org.whispersystems.textsecuregcm.storage.VerificationSessionManager;
 import org.whispersystems.textsecuregcm.util.ExceptionUtils;
 import org.whispersystems.textsecuregcm.util.HeaderUtils;
 import org.whispersystems.textsecuregcm.util.RSAUtils;
+import org.whispersystems.textsecuregcm.util.TotpUtil;
 import org.whispersystems.textsecuregcm.util.UUIDUtil;
 import org.whispersystems.textsecuregcm.util.UsernameHashZkProofVerifier;
 import org.whispersystems.textsecuregcm.util.Util;
@@ -611,6 +620,67 @@ public class AccountController {
         .map(AciServiceIdentifier::new)
         .map(AccountIdentifierResponse::new)
         .orElseThrow(() -> new WebApplicationException(Status.NOT_FOUND));
+  }
+
+  @GET
+  @Path("/totp")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountTotpGenResponse genTOTP(@Auth final AuthenticatedAccount auth) throws RateLimitExceededException {
+    rateLimiters.forDescriptor(RateLimiters.For.GEN_TOTP_OPERATION).validate(auth.getAccount().getUuid());
+    byte[] randomBytes = new byte[20];
+    new SecureRandom().nextBytes(randomBytes);
+    // Encode the random byte array using Base32
+    Base32 base32 = new Base32();
+
+    String secretKey =  base32.encodeAsString(randomBytes);
+    String issuer = "千里传音";
+    String otpAuthURL = String.format("otpauth://totp/%s:%s?secret=%s&issuer=%s", issuer, auth.getAccount().getNumber(), secretKey, issuer);
+
+    //remember secretKey
+    accounts.update(auth.getAccount(), a -> a.setTotpSecretKey(secretKey));
+
+    return new AccountTotpGenResponse(otpAuthURL);
+  }
+
+  @GET
+  @Path("/totp/{otp}")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountTotpBindResponse bindTOTP(@Auth final AuthenticatedAccount auth, @PathParam("otp") String userOtp) throws RateLimitExceededException {
+    rateLimiters.forDescriptor(RateLimiters.For.GEN_TOTP_OPERATION).validate(auth.getAccount().getUuid());
+
+    String secretKey = auth.getAccount().getTotpSecretKey();
+
+    try {
+      boolean validate = TotpUtil.validate(secretKey,userOtp);
+      if(validate){
+        //验证正确，标记为已绑定，再登录的时候就要验证了
+        accounts.update(auth.getAccount(), a -> a.setTotpBind(true));
+      }
+      return new AccountTotpBindResponse(validate);
+    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+      logger.error("err when validate user otp when bind",e);
+      return new AccountTotpBindResponse(false);
+    }
   }
 
   @GET

@@ -18,6 +18,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -60,6 +62,7 @@ import org.whispersystems.textsecuregcm.storage.KeysManager;
 import org.whispersystems.textsecuregcm.storage.VerificationSessionManager;
 import org.whispersystems.textsecuregcm.util.HeaderUtils;
 import org.whispersystems.textsecuregcm.util.RSAUtils;
+import org.whispersystems.textsecuregcm.util.TotpUtil;
 import org.whispersystems.textsecuregcm.util.Util;
 
 @Path("/v1/registration")
@@ -158,11 +161,11 @@ public class RegistrationController {
       REREGISTRATION_IDLE_DAYS_DISTRIBUTION.record(timeSinceLastSeen.toDays());
     });
     logger.info("register number="+number+", here4");
-    if (!registrationRequest.skipDeviceTransfer() && existingAccount.map(Account::isTransferSupported).orElse(false)) {
+//    if (!registrationRequest.skipDeviceTransfer() && existingAccount.map(Account::isTransferSupported).orElse(false)) {
       // If a device transfer is possible, clients must explicitly opt out of a transfer (i.e. after prompting the user)
       // before we'll let them create a new account "from scratch"
-      throw new WebApplicationException(Response.status(409, "device transfer available").build());
-    }
+//      throw new WebApplicationException(Response.status(409, "device transfer available").build());
+//    }
 //    logger.info("register number="+number+", to retrieveVerificationSession for : " + registrationRequest.sessionId());
 
 //    logger.info("register number="+number+", before pwd = " + registrationRequest.pwd());
@@ -181,7 +184,8 @@ public class RegistrationController {
     if (existingAccount.isPresent()) {
       logger.info("register number="+number+", here5");
 
-      if(!Objects.equals(pwd, existingAccount.get().getPwd())){
+      final Account account = existingAccount.get();
+      if(!Objects.equals(pwd, account.getPwd())){
         logger.error("登录失败："+number + ", 密码错误");
         Metrics.counter(ACCOUNT_CREATED_COUNTER_NAME, Tags.of(UserAgentTagUtil.getPlatformTag(userAgent),
                 Tag.of(COUNTRY_CODE_TAG_NAME, Util.getCountryCode(number)),
@@ -190,6 +194,24 @@ public class RegistrationController {
                 Tag.of(ACCOUNT_ACTIVATED_TAG_NAME, String.valueOf(false))))
             .increment();
         throw new NotAuthorizedException("wrong password", Response.Status.UNAUTHORIZED);
+      }
+
+      if(account.isTotpBind()){
+        if(registrationRequest.otp() == null || registrationRequest.otp().isEmpty()){
+          logger.error("登录失败："+number + ",绑定过totp，需要再提供otp动态密码");
+          throw new WebApplicationException(Response.status(409, "need otp").build());
+        } else {
+          try {
+            boolean validate = TotpUtil.validate(account.getTotpSecretKey(), registrationRequest.otp());
+            if(!validate){
+              logger.error("登录失败："+number + "otp不正确");
+              throw new NotAuthorizedException("wrong otp", Response.Status.UNAUTHORIZED);
+            }
+          } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+            logger.error("登录失败："+number + "otp失败,出错",e);
+            throw new NotAuthorizedException("wrong otp", Response.Status.UNAUTHORIZED);
+          }
+        }
       }
     }
 

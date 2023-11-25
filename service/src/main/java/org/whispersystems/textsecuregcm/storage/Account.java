@@ -109,6 +109,13 @@ public class Account {
   @JsonProperty
   private int version;
 
+  //微软验证器，二次验证
+  @JsonProperty
+  private String totpSecretKey;
+
+  @JsonProperty
+  private boolean totpBind;
+
   @JsonIgnore
   private boolean stale;
 
@@ -498,6 +505,22 @@ public class Account {
     requireNotStale();
 
     this.version = version;
+  }
+
+  public String getTotpSecretKey() {
+    return totpSecretKey;
+  }
+
+  public void setTotpSecretKey(final String totpSecretKey) {
+    this.totpSecretKey = totpSecretKey;
+  }
+
+  public boolean isTotpBind() {
+    return totpBind;
+  }
+
+  public void setTotpBind(final boolean totpBind) {
+    this.totpBind = totpBind;
   }
 
   public byte[] getBackupCredentialRequest() {
