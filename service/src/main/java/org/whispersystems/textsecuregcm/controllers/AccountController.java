@@ -684,6 +684,25 @@ public class AccountController {
   }
 
   @GET
+  @Path("/totp/has")
+  @Produces(MediaType.APPLICATION_JSON)
+  @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
+  @Operation(
+      summary = "Lookup username hash",
+      description = """
+          Forced unauthenticated endpoint. For the given username hash, look up a user ID.
+          """
+  )
+  @ApiResponse(responseCode = "200", description = "Account found for the given username.", useReturnTypeSchema = true)
+  @ApiResponse(responseCode = "400", description = "Request must not be authenticated.")
+  @ApiResponse(responseCode = "404", description = "Account not fount for the given username.")
+  public AccountTotpBindResponse hasTOTP(@Auth final AuthenticatedAccount auth, @PathParam("otp") String userOtp) throws RateLimitExceededException {
+    rateLimiters.forDescriptor(RateLimiters.For.GEN_TOTP_OPERATION).validate(auth.getAccount().getUuid());
+
+    return new AccountTotpBindResponse(auth.getAccount().isTotpBind());
+  }
+
+  @GET
   @Path("/username_hash/{usernameHash}")
   @Produces(MediaType.APPLICATION_JSON)
   @RateLimitedByIp(RateLimiters.For.USERNAME_LOOKUP)
