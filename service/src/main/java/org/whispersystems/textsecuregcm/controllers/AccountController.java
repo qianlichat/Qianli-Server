@@ -643,13 +643,13 @@ public class AccountController {
     Base32 base32 = new Base32();
 
     String secretKey =  base32.encodeAsString(randomBytes);
-    String issuer = "千里传音";
-    String otpAuthURL = String.format("otpauth://totp/%s:%s?secret=%s&issuer=%s", issuer, auth.getAccount().getNumber(), secretKey, issuer);
+//    String issuer = "千里传音";
+//    String otpAuthURL = String.format("otpauth://totp/%s:%s?secret=%s&issuer=%s", issuer, auth.getAccount().getNumber(), secretKey, issuer);
 
     //remember secretKey
     accounts.update(auth.getAccount(), a -> a.setTotpSecretKey(secretKey));
 
-    return new AccountTotpGenResponse(otpAuthURL);
+    return new AccountTotpGenResponse(secretKey);
   }
 
   @GET
