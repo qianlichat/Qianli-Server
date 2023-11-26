@@ -16,7 +16,7 @@ import org.whispersystems.textsecuregcm.controllers.AccountController;
 
 public class TotpUtil {
 
-  private static final Logger logger = LoggerFactory.getLogger(TotpUtil.class);
+//  private static final Logger logger = LoggerFactory.getLogger(TotpUtil.class);
 
   public static boolean validate(String secretKey, String userOtp)
       throws NoSuchAlgorithmException, InvalidKeyException {
@@ -28,7 +28,7 @@ public class TotpUtil {
     long timestamp = Instant.now().getEpochSecond() / 30;
 
     String t = timeStamp2Date(timestamp,null);
-    logger.info("check otp, time= :" + t + ", user otp:" + userOtp + ", secretKey=" + secretKey);
+//    logger.info("check otp, time= :" + t + ", user otp:" + userOtp + ", secretKey=" + secretKey);
 
     // Convert the timestamp to bytes
     ByteBuffer buffer = ByteBuffer.allocate(8);
@@ -61,7 +61,7 @@ public class TotpUtil {
     // Convert the OTP to a string with leading zeros
     String formattedOTP = String.format("%06d", otp);
 
-    logger.info("check otp, calculated :" + formattedOTP + ", user otp:" + userOtp + ", secretKey=" + secretKey);
+//    logger.info("check otp, calculated :" + formattedOTP + ", user otp:" + userOtp + ", secretKey=" + secretKey);
 
     // Compare the user-input OTP with the calculated OTP
     return formattedOTP.equals(userOtp);

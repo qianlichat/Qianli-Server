@@ -671,7 +671,7 @@ public class AccountController {
     String secretKey = auth.getAccount().getTotpSecretKey();
 
     try {
-      logger.info("bindTOTP for "+ auth.getAccount().getNumber()+",secretKey="+secretKey);
+//      logger.info("bindTOTP for "+ auth.getAccount().getNumber()+",secretKey="+secretKey);
       boolean validate = TotpUtil.validate(secretKey,userOtp);
       if(validate){
         //验证正确，标记为已绑定，再登录的时候就要验证了
