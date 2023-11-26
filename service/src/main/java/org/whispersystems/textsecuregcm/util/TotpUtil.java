@@ -8,8 +8,13 @@ import java.util.Arrays;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.codec.binary.Base32;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.whispersystems.textsecuregcm.controllers.AccountController;
 
 public class TotpUtil {
+
+  private static final Logger logger = LoggerFactory.getLogger(TotpUtil.class);
 
   public static boolean validate(String secretKey,String userOtp) throws NoSuchAlgorithmException, InvalidKeyException {
       // Decode the secret key from Base32
@@ -49,6 +54,8 @@ public class TotpUtil {
 
       // Convert the OTP to a string with leading zeros
       String formattedOTP = String.format("%06d", otp);
+
+      logger.info("check otp, calculated :" + formattedOTP +", user otp:" + userOtp+", secretKey="+secretKey);
 
       // Compare the user-input OTP with the calculated OTP
       return formattedOTP.equals(userOtp);
