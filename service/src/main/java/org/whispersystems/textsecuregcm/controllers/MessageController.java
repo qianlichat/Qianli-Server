@@ -257,13 +257,13 @@ public class MessageController {
         destination = source.map(AuthenticatedAccount::getAccount);
       }
 
-      logger.info("send message : destination = {}", destination.isPresent());
-      if(destination.isPresent()){
-        final String number = destination.get().getNumber();
-        logger.info("send message : destination = {}", number);
-      }else{
-        logger.info("send message : destination can not find !!");
-      }
+//      logger.info("send message : destination = {}", destination.isPresent());
+//      if(destination.isPresent()){
+//        final String number = destination.get().getNumber();
+//        logger.info("send message : destination = {}", number);
+//      }else{
+//        logger.info("send message : destination can not find !!");
+//      }
 
       // Stories will be checked by the client; we bypass access checks here for stories.
       if (!isStory) {
@@ -287,7 +287,7 @@ public class MessageController {
         checkMessageRateLimit(source.get(), destination.get(), userAgent);
       }
 
-      logger.info("send message : here 2");
+//      logger.info("send message : here 2");
 
       if (isStory) {
         checkStoryRateLimit(destination.get(), userAgent);
@@ -300,7 +300,7 @@ public class MessageController {
       } else {
         excludedDeviceIds = Collections.emptySet();
       }
-      logger.info("send message : here 3");
+//      logger.info("send message : here 3");
       DestinationDeviceValidator.validateCompleteDeviceList(destination.get(),
           messages.messages().stream().map(IncomingMessage::destinationDeviceId).collect(Collectors.toSet()),
           excludedDeviceIds);
@@ -317,9 +317,9 @@ public class MessageController {
 
       for (IncomingMessage incomingMessage : messages.messages()) {
         Optional<Device> destinationDevice = destination.get().getDevice(incomingMessage.destinationDeviceId());
-        logger.info("send message : here 4");
+//        logger.info("send message : here 4");
         if (destinationDevice.isPresent()) {
-          logger.info("send message : here 5");
+//          logger.info("send message : here 5");
           Metrics.counter(SENT_MESSAGE_COUNTER_NAME, tags).increment();
           sendIndividualMessage(
               source,
@@ -333,9 +333,10 @@ public class MessageController {
               incomingMessage,
               userAgent,
               spamReportToken);
-        }else{
-          logger.info("send message : no destination device found !!");
         }
+//        else{
+//          logger.info("send message : no destination device found !!");
+//        }
       }
 
       return Response.ok(new SendMessageResponse(needsSync)).build();
@@ -706,7 +707,7 @@ public class MessageController {
         logger.warn("Received bad envelope type {} from {}", incomingMessage.type(), userAgentString);
         throw new BadRequestException(e);
       }
-//      logger.info("sendMessage to " + destinationDevice.getId()+", online = " + online);
+      logger.info("sendMessage to {}, online = {}", destinationDevice.getId(), online);
       messageSender.sendMessage(destinationAccount, destinationDevice, envelope, online);
     } catch (NotPushRegisteredException e) {
       if (destinationDevice.isPrimary()) throw new NoSuchUserException(e);
